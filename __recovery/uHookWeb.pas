@@ -245,8 +245,8 @@ function replaced_InternetWriteFile(hFile: HINTERNET; lpBuffer: Pointer;
   var lpdwNumberOfBytesWritten: DWORD): BOOL; stdcall;
 begin
   //这儿进行接收的数据处理
-  //gRdata:=string(lpBuffer);
-  //SendMessage(hform, WM_CAP_WORK,IDX_InternetReadFile,0);
+  s:=gets(lpBuffer,dwNumberOfBytesToWrite);
+  SendMessage(hform, WM_CAP_WORK,IDX_InternetReadFile,0);
   uFuncs.saveTofile(uFuncs.getFilename(uConfig.workdir,'quest','.txt'),lpBuffer,dwNumberOfBytesToWrite);
   MessageBeep(10); //简单的响一声
   result:=original_InternetWriteFile(hFile,lpBuffer,dwNumberOfBytesToWrite,lpdwNumberOfBytesWritten);
