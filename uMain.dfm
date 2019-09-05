@@ -39,15 +39,15 @@ object fMain: TfMain
       Caption = #22320#22336#65306
     end
     object edturl: TEdit
-      Left = 60
+      Left = 50
       Top = 8
-      Width = 320
+      Width = 583
       Height = 21
       TabOrder = 0
       Text = 'http://localhost:8080/test.htm'
     end
     object btnBrowser: TButton
-      Left = 393
+      Left = 647
       Top = 8
       Width = 75
       Height = 25
@@ -56,7 +56,7 @@ object fMain: TfMain
       OnClick = btnBrowserClick
     end
     object btnClear: TButton
-      Left = 474
+      Left = 728
       Top = 8
       Width = 75
       Height = 25
@@ -65,7 +65,7 @@ object fMain: TfMain
       OnClick = btnClearClick
     end
     object chkDownAll: TCheckBox
-      Left = 576
+      Left = 830
       Top = 13
       Width = 121
       Height = 17

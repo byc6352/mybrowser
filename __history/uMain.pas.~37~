@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
-  Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig;
+  Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi;
 
 type
   TfMain = class(TForm)
@@ -31,6 +31,8 @@ type
     Web2: TWebBrowser;
     btnClear: TButton;
     chkDownAll: TCheckBox;
+    PopSelData: TPopupMenu;
+    nOpenDir: TMenuItem;
     procedure FormShow(Sender: TObject);
     procedure btnBrowserClick(Sender: TObject);
     procedure Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
@@ -49,11 +51,14 @@ type
       var Cancel: WordBool);
     procedure btnClearClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure nOpenDirClick(Sender: TObject);
   private
     { Private declarations }
     mData:TListItem;
     procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
     procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
+    procedure getResource();
+    function findResource(url:string):boolean;
   public
     { Public declarations }
   end;
@@ -66,6 +71,33 @@ var
 implementation
 
 {$R *.dfm}
+function TfMain.findResource(url:string):boolean;
+const
+  mp4='.mp4';
+  swf='.swf';
+  fla='.fla';
+begin
+  result:=true;
+  if pos(mp4,url)>0 then exit;
+  if pos(swf,url)>0 then exit;
+  if pos(fla,url)>0 then exit;
+  result:=false;
+end;
+procedure TfMain.getResource();
+var
+  i:integer;
+  url:string;
+  ss:tstrings;
+begin
+  if(listdata.Items.Count=0)then exit;
+  ss:=tstringlist.Create;
+  for i:=0 to listdata.Items.Count-1 do begin
+    url:=listdata.Items.Item[i].SubItems[1];
+    if(findResource(url))then ss.Add(url);
+  end;
+  if(ss.Count>0)then memoinfo.Lines.AddStrings(ss);
+  ss.Free;
+end;
 function getPageCode(doc:IHTMLDocument2;ss:tstrings):tstrings;//返回页面源代码
 var
   ms: TMemoryStream;
@@ -85,7 +117,7 @@ var
 begin
   result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',now());
 end;
-procedure downMessage(var msg:TMessage);
+procedure TfMain.downMessage(var msg:TMessage);
 var
   i,j:integer;
 begin
@@ -94,7 +126,7 @@ begin
   if j=1 then
     bar1.Panels[1].Text:='下载完毕！'
   else
-    bar1.Panels[1].Text:='正在下载：'+inttostr(i)+'['+uDown.mdowns[i]+']';
+    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']';
 end;
 procedure TfMain.httpMessage(var msg:TMessage);
 var
@@ -113,22 +145,23 @@ begin
       mData.SubItems.Add('');
       mData.SubItems.Add('');
       mData.SubItems.Add('');
+      mData.SubItems.Add('');
       if(chkDownAll.Checked)then uDown.addUrl(gurl);
     end;
   IDX_HttpSendRequestW:begin
       //fmain.MemoInfo.Lines.Add(gData);
-       mData.SubItems[2]:=gqHeaders;
+       mData.SubItems[3]:=gqHeaders;
     end;
   IDX_HttpSendRequestExW:begin
 
     end;
   IDX_HttpAddRequestHeadersW:begin  //
-      mData.SubItems[2]:=gQHeaders;
+      mData.SubItems[3]:=gQHeaders;
       //fmain.MemoInfo.Lines.Add(gHeaders);
     end;
   IDX_InternetWriteFile:begin
-     //mData.SubItems[4]:=gQdata;
-
+     mData.SubItems[5]:=uHookweb.gQdata;
+     memoinfo.Lines.Add(uHookweb.gQdata);
   end;
   IDX_InternetReadFile:begin  //
       //mData:=listData.Items.Add;
@@ -139,11 +172,17 @@ begin
       //mData.SubItems.Add(grHeaders);
       //mData.SubItems.Add(gQdata);
       //mData.SubItems.Add(gRdata);
-      mData.SubItems[5]:=gRdata;
+      //mData.SubItems[5]:=gRdata;
+      mData.SubItems[6]:=uHookweb.gRdata;
+      memoinfo.Lines.Add(uHookweb.gRdata);
     end;
   IDX_HttpQueryInfoW:begin  //IDX_InternetReadFile
-     if(len=1)then mData.SubItems[2]:=gqHeaders else
-      mData.SubItems[3]:=grHeaders;
+     //if(len=1)then mData.SubItems[3]:=gqHeaders else
+     //if(len=0)then mData.SubItems[4]:=grHeaders else
+     //if(len=2)then mData.SubItems[2]:=gLength;
+     mData.SubItems[3]:=gqHeaders;
+     mData.SubItems[4]:=grHeaders;
+     mData.SubItems[2]:=gLength;
     end;
   end;
 
@@ -152,14 +191,33 @@ procedure TfMain.listDataSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
 begin
   memData.Clear;
-  memData.Lines.Add('-------------request headers---------------');
+  memData.Lines.Add('-------------request target ---------------');
+  memData.Lines.Add(item.SubItems[1]);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request length---------------');
   memData.Lines.Add(item.SubItems[2]);
-  memData.Lines.Add('------------response headers---------------');
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request headers---------------');
   memData.Lines.Add(item.SubItems[3]);
-  memData.Lines.Add('-------------request data------------------');
+  memData.Lines.Add('------------response headers---------------');
   memData.Lines.Add(item.SubItems[4]);
-  memData.Lines.Add('-------------response data-----------------');
+  memData.Lines.Add('-------------request data------------------');
   memData.Lines.Add(item.SubItems[5]);
+  memData.Lines.Add('-------------response data-----------------');
+  memData.Lines.Add(item.SubItems[6]);
+end;
+
+procedure TfMain.nOpenDirClick(Sender: TObject);
+var
+  url,localdir:string;
+begin
+  url:=listdata.Selected.SubItems[1];
+  if pos(mSite,url)<=0 then url:=mSite+url;
+  localdir:=uDown.url2file(url);
+  localdir:=extractfiledir(localdir);
+  ShellExecute(Handle,'open','Explorer.exe',pchar(localdir),nil,1);
 end;
 
 procedure TfMain.btnBrowserClick(Sender: TObject);
@@ -184,6 +242,7 @@ procedure TfMain.FormShow(Sender: TObject);
 begin
   uhookweb.hForm:=fmain.Handle; //
   uDown.start(uConfig.workdir,fmain.Handle);
+  TWinControl(Web2).Visible:=False;
 end;
 
 procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
@@ -191,6 +250,7 @@ procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
   var Cancel: WordBool);
 begin
   uDown.pause();
+  uHookweb.state:=STAT_BROWSING;
   bar1.Panels[0].Text:='正在加载页面...';
 end;
 
@@ -204,7 +264,9 @@ begin
 
   doc:=web1.Document as IHTMLDocument2;
   getPageCode(doc,memcode.Lines);
+  //doc.designMode:='On';
   mPage:=doc.url;
+  mPort:=getPort(mPage);
   msite:=doc.domain;
   mProtocol:=doc.protocol;
   if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https://' else mProtocol:='http://';
@@ -214,6 +276,10 @@ begin
     uDown.addUrl(mPage);
     uDown.start();
   end;
+  getResource();
+  edturl.Text:=mpage;
+  fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
+  uHookweb.state:=STAT_IDLE;
   bar1.Panels[0].Text:='页面加载完毕！共有：'+inttostr(listdata.Items.Count)+'项！';
 end;
 

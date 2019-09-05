@@ -3,9 +3,6 @@ unit uConfig;
 interface
 uses
   windows,sysutils;
-const
-  APP_NAME='ÎÒµÄä¯ÀÀÆ÷';
-  APP_VERSION='1.00';
 var
   workdir:string;
 procedure init();

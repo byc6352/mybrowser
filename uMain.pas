@@ -160,8 +160,8 @@ begin
       //fmain.MemoInfo.Lines.Add(gHeaders);
     end;
   IDX_InternetWriteFile:begin
-     //mData.SubItems[4]:=gQdata;
-
+     mData.SubItems[5]:=uHookweb.gQdata;
+     memoinfo.Lines.Add(uHookweb.gQdata);
   end;
   IDX_InternetReadFile:begin  //
       //mData:=listData.Items.Add;
@@ -173,7 +173,8 @@ begin
       //mData.SubItems.Add(gQdata);
       //mData.SubItems.Add(gRdata);
       //mData.SubItems[5]:=gRdata;
-      memoinfo.Lines.Add(uHookweb.s);
+      mData.SubItems[6]:=uHookweb.gRdata;
+      memoinfo.Lines.Add(uHookweb.gRdata);
     end;
   IDX_HttpQueryInfoW:begin  //IDX_InternetReadFile
      //if(len=1)then mData.SubItems[3]:=gqHeaders else
@@ -242,6 +243,7 @@ begin
   uhookweb.hForm:=fmain.Handle; //
   uDown.start(uConfig.workdir,fmain.Handle);
   TWinControl(Web2).Visible:=False;
+  fmain.Caption:=APP_NAME+'v'+APP_VERSION;
 end;
 
 procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
@@ -249,6 +251,7 @@ procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
   var Cancel: WordBool);
 begin
   uDown.pause();
+  uHookweb.state:=STAT_BROWSING;
   bar1.Panels[0].Text:='正在加载页面...';
 end;
 
@@ -275,6 +278,9 @@ begin
     uDown.start();
   end;
   getResource();
+  edturl.Text:=mpage;
+  fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
+  uHookweb.state:=STAT_IDLE;
   bar1.Panels[0].Text:='页面加载完毕！共有：'+inttostr(listdata.Items.Count)+'项！';
 end;
 

@@ -76,12 +76,5 @@ begin
   i:=random(10);
   result:=workdir+'\'+FormatDateTime('yyyymmddhhnnsszzz',now())+inttostr(i)+'.txt';
 end;
-function ReversePos(SubStr, S: String): Integer;
-var
-  i : Integer;
-begin
-  i := Pos(ReverseString(SubStr), ReverseString(S));
-  if i > 0 then i := Length(S) - i - Length(SubStr) + 2;
-  Result := i;
-end;
+
 end.

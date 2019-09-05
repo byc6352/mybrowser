@@ -13,7 +13,11 @@ Const
   IDX_HttpQueryInfoW=6;
   IDX_InternetWriteFile=7;
 
+  STAT_BROWSING=0;
+  STAT_IDLE=1;
+
 var
+  state:integer; //浏览器状态：STAT_BROWSING正在加载页面；STAT_IDLE空闲；
   original_InternetSetCookieEx : function(lpszUrl, lpszCookieName,lpszCookieData: LPCWSTR; dwFlags: DWORD; lpReserved: Pointer): DWORD; stdcall;
 
   original_Send: function(s: TSocket; var Buf; len, flags: Integer): Integer; stdcall;
@@ -231,10 +235,10 @@ begin
   result:=original_InternetReadFile(hFile,lpBuffer,dwNumberOfBytesToRead,lpdwNumberOfBytesRead);
   if not result then exit;
   //这儿进行接收的数据处理
-  if(lpdwNumberOfBytesRead>0) and (lpdwNumberOfBytesRead<1024)then begin
-    s:=gets(lpBuffer,lpdwNumberOfBytesRead);
+  if((lpdwNumberOfBytesRead>0) and (lpdwNumberOfBytesRead<100))or(state=STAT_IDLE)or(gverb='POST')then begin
+    gRdata:=gets(lpBuffer,lpdwNumberOfBytesRead);
     MessageBeep(10); //简单的响一声
-    uFuncs.saveTofile(uFuncs.getFilename(uConfig.workdir),lpBuffer,lpdwNumberOfBytesRead);
+    uFuncs.saveTofile(uFuncs.getFilename(uConfig.workdir,'reponse','.txt'),lpBuffer,lpdwNumberOfBytesRead);
     SendMessage(hform, WM_CAP_WORK,IDX_InternetReadFile,0);
   end;
 
@@ -245,8 +249,8 @@ function replaced_InternetWriteFile(hFile: HINTERNET; lpBuffer: Pointer;
   var lpdwNumberOfBytesWritten: DWORD): BOOL; stdcall;
 begin
   //这儿进行接收的数据处理
-  //gRdata:=string(lpBuffer);
-  //SendMessage(hform, WM_CAP_WORK,IDX_InternetReadFile,0);
+  gQdata:=gets(lpBuffer,dwNumberOfBytesToWrite);
+  SendMessage(hform, WM_CAP_WORK,IDX_InternetReadFile,0);
   uFuncs.saveTofile(uFuncs.getFilename(uConfig.workdir,'quest','.txt'),lpBuffer,dwNumberOfBytesToWrite);
   MessageBeep(10); //简单的响一声
   result:=original_InternetWriteFile(hFile,lpBuffer,dwNumberOfBytesToWrite,lpdwNumberOfBytesWritten);
