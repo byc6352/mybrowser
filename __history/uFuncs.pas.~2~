@@ -1,0 +1,19 @@
+unit uFuncs;
+
+interface
+uses
+  windows;
+  function saveTofile(filename:string;p:pointer;dwSize:DWORD):boolean;
+implementation
+function saveTofile(filename:string;p:pointer;dwSize:DWORD):boolean;
+var
+  hFile:cardinal;
+begin
+   hFile = CreateFile(filename, GENERIC_WRITE, FILE_SHARE_WRITE, nil, CREATE_ALWAYS, 0, 0);
+    if (hFile = INVALID_HANDLE_VALUE)
+    {
+        m_hFile = NULL;
+        MessageBoxA(NULL, "Can not open file!", "Error", MB_OK);
+    }
+end;
+end.

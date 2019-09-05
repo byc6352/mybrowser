@@ -1,0 +1,15 @@
+program mybrowser;
+
+uses
+  Vcl.Forms,
+  uMain in 'uMain.pas' {fMain},
+  uHookWeb in 'uHookWeb.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TfMain, fMain);
+  Application.Run;
+end.

@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <Transactions>
+    <Transaction>2019/09/02 18:05:01.590,=C:\Users\HUASINE\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2019/09/02 18:05:51.230,D:\works\delphi\mybrowser\uMain.dfm=C:\Users\HUASINE\Documents\Embarcadero\Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>2019/09/02 18:05:51.230,D:\works\delphi\mybrowser\uMain.pas=C:\Users\HUASINE\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2019/09/02 18:05:59.924,D:\works\delphi\mybrowser\mybrowser.dproj=C:\Users\HUASINE\Documents\Embarcadero\Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>2019/09/02 18:59:45.105,=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/02 19:00:19.681,D:\works\delphi\mybrowser\uHookWeb.pas=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/03 19:16:22.476,=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/03 19:16:35.850,D:\works\delphi\mybrowser\uFuncs.pas=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/04 08:55:28.238,=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/04 08:56:04.728,D:\works\delphi\mybrowser\uDown.pas=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/04 09:23:10.486,=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/04 09:23:25.393,D:\works\delphi\mybrowser\uConfig.pas=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/05 17:31:12.630,=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/05 17:32:08.814,D:\works\delphi\mybrowser\uCoding.pas=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+  </Transactions>
+</BorlandProject>
