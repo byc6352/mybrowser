@@ -5,14 +5,13 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
-  Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi;
+  Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi,uData,
+  Vcl.Buttons,uFuncs;
 
 type
   TfMain = class(TForm)
     Panel1: TPanel;
-    Label1: TLabel;
     edturl: TEdit;
-    btnBrowser: TButton;
     Bar1: TStatusBar;
     Page1: TPageControl;
     tsData: TTabSheet;
@@ -33,8 +32,14 @@ type
     chkDownAll: TCheckBox;
     PopSelData: TPopupMenu;
     nOpenDir: TMenuItem;
+    btnBack: TBitBtn;
+    btnForward: TBitBtn;
+    btnBrush: TBitBtn;
+    nOpenRequestData: TMenuItem;
+    n1: TMenuItem;
+    nOpenResponseData: TMenuItem;
+    Timer1: TTimer;
     procedure FormShow(Sender: TObject);
-    procedure btnBrowserClick(Sender: TObject);
     procedure Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
       const URL: OleVariant);
     procedure Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
@@ -52,13 +57,21 @@ type
     procedure btnClearClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure nOpenDirClick(Sender: TObject);
+    procedure btnBrushClick(Sender: TObject);
+    procedure edturlEnter(Sender: TObject);
+    procedure btnBackClick(Sender: TObject);
+    procedure btnForwardClick(Sender: TObject);
+    procedure nOpenRequestDataClick(Sender: TObject);
+    procedure nOpenResponseDataClick(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
-    mData:TListItem;
+
     procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
     procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
     procedure getResource();
     function findResource(url:string):boolean;
+    procedure getDataToShow();
   public
     { Public declarations }
   end;
@@ -66,11 +79,30 @@ type
 var
   fMain: TfMain;
 
-
-
 implementation
 
 {$R *.dfm}
+procedure TfMain.getDataToShow();
+var
+  data:TListItem;
+  i:integer;
+begin
+  while listData.Items.Count<uData.iData do
+  begin
+    i:=listData.Items.Count;
+    data:=listData.Items.Add;
+    data.Caption:=ufuncs.getDataTimeString(uData.datas[i].dt);
+    data.SubItems.Add(uData.datas[i].verb);
+    data.SubItems.Add(uData.datas[i].url);
+    data.SubItems.Add(uData.datas[i].len);
+    data.SubItems.Add(uData.datas[i].qHeader);
+    data.SubItems.Add(uData.datas[i].rHeader);
+    data.SubItems.Add(uData.datas[i].qData);
+    data.SubItems.Add(uData.datas[i].rData);
+    if(chkDownAll.Checked)then uDown.addUrl(uData.datas[i].url);
+    application.ProcessMessages;
+  end;
+end;
 function TfMain.findResource(url:string):boolean;
 const
   mp4='.mp4';
@@ -111,12 +143,7 @@ begin
   ms.Free;
   result:=ss;
 end;
-function getDataTimeString():string;
-var
-  s:string;
-begin
-  result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',now());
-end;
+
 procedure TfMain.downMessage(var msg:TMessage);
 var
   i,j:integer;
@@ -128,6 +155,11 @@ begin
   else
     bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']';
 end;
+procedure TfMain.edturlEnter(Sender: TObject);
+begin
+  //btnBrush.click();
+end;
+
 procedure TfMain.httpMessage(var msg:TMessage);
 var
   len,flag:integer;
@@ -135,57 +167,6 @@ var
 begin
   len:=msg.LParam;
   flag:=msg.WParam;
-  case flag of
-  IDX_HttpOpenRequestW:begin
-      mData:=listData.Items.Add;
-      mData.Caption:=getDataTimeString();
-      mData.SubItems.Add(gverb);
-      mData.SubItems.Add(gurl);
-      mData.SubItems.Add('');
-      mData.SubItems.Add('');
-      mData.SubItems.Add('');
-      mData.SubItems.Add('');
-      mData.SubItems.Add('');
-      if(chkDownAll.Checked)then uDown.addUrl(gurl);
-    end;
-  IDX_HttpSendRequestW:begin
-      //fmain.MemoInfo.Lines.Add(gData);
-       mData.SubItems[3]:=gqHeaders;
-    end;
-  IDX_HttpSendRequestExW:begin
-
-    end;
-  IDX_HttpAddRequestHeadersW:begin  //
-      mData.SubItems[3]:=gQHeaders;
-      //fmain.MemoInfo.Lines.Add(gHeaders);
-    end;
-  IDX_InternetWriteFile:begin
-     mData.SubItems[5]:=uHookweb.gQdata;
-     memoinfo.Lines.Add(uHookweb.gQdata);
-  end;
-  IDX_InternetReadFile:begin  //
-      //mData:=listData.Items.Add;
-      //mData.Caption:=getDataTimeString();
-      //mData.SubItems.Add(gverb);
-      //mData.SubItems.Add(gurl);
-      //mData.SubItems.Add(gHeaders);
-      //mData.SubItems.Add(grHeaders);
-      //mData.SubItems.Add(gQdata);
-      //mData.SubItems.Add(gRdata);
-      //mData.SubItems[5]:=gRdata;
-      mData.SubItems[6]:=uHookweb.gRdata;
-      memoinfo.Lines.Add(uHookweb.gRdata);
-    end;
-  IDX_HttpQueryInfoW:begin  //IDX_InternetReadFile
-     //if(len=1)then mData.SubItems[3]:=gqHeaders else
-     //if(len=0)then mData.SubItems[4]:=grHeaders else
-     //if(len=2)then mData.SubItems[2]:=gLength;
-     mData.SubItems[3]:=gqHeaders;
-     mData.SubItems[4]:=grHeaders;
-     mData.SubItems[2]:=gLength;
-    end;
-  end;
-
 end;
 procedure TfMain.listDataSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
@@ -220,17 +201,57 @@ begin
   ShellExecute(Handle,'open','Explorer.exe',pchar(localdir),nil,1);
 end;
 
-procedure TfMain.btnBrowserClick(Sender: TObject);
+procedure TfMain.nOpenRequestDataClick(Sender: TObject);
+var
+  data,localdir:string;
+begin
+  data:=listdata.Selected.SubItems[5];
+  if(data='')then exit;
+  ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
+
+end;
+
+procedure TfMain.nOpenResponseDataClick(Sender: TObject);
+var
+  data,localdir:string;
+begin
+  data:=listdata.Selected.SubItems[6];
+  if(data='')then exit;
+  ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
+
+end;
+
+procedure TfMain.Timer1Timer(Sender: TObject);
+begin
+  getDataToShow();
+end;
+
+procedure TfMain.btnBackClick(Sender: TObject);
+begin
+  web1.GoBack;
+end;
+
+procedure TfMain.btnBrushClick(Sender: TObject);
 begin
   web1.Navigate(trim(edtUrl.Text));
+  btnBack.Enabled:=true;
+  btnForward.Enabled:=true;
 end;
 
 procedure TfMain.btnClearClick(Sender: TObject);
 begin
   if MessageBox(0, '即将清空所有数据，请确认!', '警告', MB_OKCANCEL + MB_ICONWARNING) = ID_OK then  begin  //   MB_ICONQUESTION
     listData.Clear;
+    memData.Lines.Clear;
+    uDown.clear();
+    uData.clear;
     bar1.Panels[0].Text:='数据已经清空！';
   end;
+end;
+
+procedure TfMain.btnForwardClick(Sender: TObject);
+begin
+  web1.GoForward;
 end;
 
 procedure TfMain.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -240,7 +261,8 @@ end;
 
 procedure TfMain.FormShow(Sender: TObject);
 begin
-  uhookweb.hForm:=fmain.Handle; //
+  //uhookweb.hForm:=fmain.Handle; //
+
   uDown.start(uConfig.workdir,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
@@ -272,16 +294,19 @@ begin
   mProtocol:=doc.protocol;
   if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https://' else mProtocol:='http://';
 
+  edturl.Text:=mpage;
+  fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
+  uHookweb.state:=STAT_IDLE;
+  bar1.Panels[0].Text:='页面加载完毕！共有：'+inttostr(listdata.Items.Count)+'项！';
+
+
   if(chkDownAll.Checked)then begin
     uDown.setHost(mprotocol,msite);
     uDown.addUrl(mPage);
     uDown.start();
   end;
   getResource();
-  edturl.Text:=mpage;
-  fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
-  uHookweb.state:=STAT_IDLE;
-  bar1.Panels[0].Text:='页面加载完毕！共有：'+inttostr(listdata.Items.Count)+'项！';
+
 end;
 
 procedure TfMain.Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;

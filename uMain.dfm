@@ -17,8 +17,8 @@ object fMain: TfMain
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 788
-    Top = 36
-    Height = 780
+    Top = 33
+    Height = 783
     Align = alRight
     ExplicitLeft = 544
     ExplicitTop = 384
@@ -28,51 +28,65 @@ object fMain: TfMain
     Left = 0
     Top = 0
     Width = 1080
-    Height = 36
+    Height = 33
     Align = alTop
     TabOrder = 0
-    object Label1: TLabel
-      Left = 8
-      Top = 11
-      Width = 36
-      Height = 13
-      Caption = #22320#22336#65306
-    end
     object edturl: TEdit
-      Left = 50
-      Top = 8
-      Width = 583
+      Left = 75
+      Top = 6
+      Width = 644
       Height = 21
       TabOrder = 0
-      Text = 'http://localhost:8080/test.htm'
-    end
-    object btnBrowser: TButton
-      Left = 647
-      Top = 8
-      Width = 75
-      Height = 25
-      Caption = #27983#35272
-      TabOrder = 1
-      OnClick = btnBrowserClick
+      Text = 'http://localhost:8080/index.htm'
+      OnEnter = edturlEnter
     end
     object btnClear: TButton
       Left = 728
-      Top = 8
+      Top = 5
       Width = 75
       Height = 25
       Caption = #28165#31354
-      TabOrder = 2
+      TabOrder = 1
       OnClick = btnClearClick
     end
     object chkDownAll: TCheckBox
-      Left = 830
-      Top = 13
+      Left = 811
+      Top = 8
       Width = 121
       Height = 17
       Caption = #19979#36733#25152#26377#32593#39029#36164#28304
       Checked = True
       State = cbChecked
+      TabOrder = 2
+    end
+    object btnBack: TBitBtn
+      Left = 2
+      Top = 5
+      Width = 24
+      Height = 25
+      Caption = #22238
+      Enabled = False
       TabOrder = 3
+      OnClick = btnBackClick
+    end
+    object btnForward: TBitBtn
+      Left = 25
+      Top = 5
+      Width = 24
+      Height = 25
+      Caption = #21069
+      Enabled = False
+      TabOrder = 4
+      OnClick = btnForwardClick
+    end
+    object btnBrush: TBitBtn
+      Left = 49
+      Top = 5
+      Width = 24
+      Height = 25
+      Caption = #21047
+      TabOrder = 5
+      OnClick = btnBrushClick
     end
   end
   object Bar1: TStatusBar
@@ -93,9 +107,9 @@ object fMain: TfMain
   end
   object Page1: TPageControl
     Left = 791
-    Top = 36
+    Top = 33
     Width = 289
-    Height = 780
+    Height = 783
     ActivePage = tsInfo
     Align = alRight
     TabOrder = 2
@@ -109,10 +123,11 @@ object fMain: TfMain
         Left = 0
         Top = 0
         Width = 281
-        Height = 752
+        Height = 755
         Align = alClient
         ScrollBars = ssBoth
         TabOrder = 0
+        ExplicitHeight = 752
       end
     end
     object tsInfo: TTabSheet
@@ -123,18 +138,19 @@ object fMain: TfMain
         Left = 0
         Top = 0
         Width = 281
-        Height = 752
+        Height = 755
         Align = alClient
         ScrollBars = ssBoth
         TabOrder = 0
+        ExplicitHeight = 752
       end
     end
   end
   object Panel2: TPanel
     Left = 0
-    Top = 36
+    Top = 33
     Width = 788
-    Height = 780
+    Height = 783
     Align = alClient
     TabOrder = 3
     ExplicitLeft = 456
@@ -143,7 +159,7 @@ object fMain: TfMain
     ExplicitHeight = 41
     object Splitter2: TSplitter
       Left = 1
-      Top = 626
+      Top = 629
       Width = 786
       Height = 3
       Cursor = crVSplit
@@ -153,7 +169,7 @@ object fMain: TfMain
     end
     object listData: TListView
       Left = 1
-      Top = 629
+      Top = 632
       Width = 786
       Height = 150
       Align = alBottom
@@ -200,10 +216,11 @@ object fMain: TfMain
       Left = 1
       Top = 1
       Width = 786
-      Height = 625
+      Height = 628
       ActivePage = tsweb
       Align = alClient
       TabOrder = 1
+      ExplicitHeight = 625
       object tsweb: TTabSheet
         Caption = #27983#35272#22120
         ExplicitWidth = 281
@@ -212,7 +229,7 @@ object fMain: TfMain
           Left = 0
           Top = 0
           Width = 778
-          Height = 597
+          Height = 600
           Align = alClient
           TabOrder = 0
           OnBeforeNavigate2 = Web1BeforeNavigate2
@@ -254,7 +271,7 @@ object fMain: TfMain
           Left = 0
           Top = 0
           Width = 778
-          Height = 597
+          Height = 600
           Align = alClient
           ScrollBars = ssBoth
           TabOrder = 0
@@ -271,5 +288,21 @@ object fMain: TfMain
       Caption = #25171#24320#26412#22320#25991#20214#22841
       OnClick = nOpenDirClick
     end
+    object n1: TMenuItem
+      Caption = '-'
+    end
+    object nOpenRequestData: TMenuItem
+      Caption = #25171#24320#35831#27714#30340#25968#25454
+      OnClick = nOpenRequestDataClick
+    end
+    object nOpenResponseData: TMenuItem
+      Caption = #25171#24320#36820#22238#30340#25968#25454
+      OnClick = nOpenResponseDataClick
+    end
+  end
+  object Timer1: TTimer
+    OnTimer = Timer1Timer
+    Left = 544
+    Top = 432
   end
 end

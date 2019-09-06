@@ -7,7 +7,8 @@ uses
   uFuncs in 'uFuncs.pas',
   uDown in 'uDown.pas',
   uConfig in 'uConfig.pas',
-  uCoding in 'uCoding.pas';
+  uCoding in 'uCoding.pas',
+  uData in 'uData.pas';
 
 {$R *.res}
 

@@ -2,19 +2,36 @@ unit uFuncs;
 
 interface
 uses
-  windows,sysutils,strutils,classes;
+  windows,sysutils,strutils,classes,uconfig;
   function saveTofile(filename:string;p:pointer;dwSize:DWORD):boolean;
   function getFilename(workdir:string):string;overload;
   function getFilename(workdir:string;cap:string;ext:string):string;overload;
   function ReversePos(SubStr, S: String): Integer;
   function saveTofile2(filename:string;p:pointer;dwSize:DWORD):boolean;
   function gets(p:pointer;dwSize:DWORD):string;
+  function getDataTimeString():string;overload;
+  function getDataTimeString(dt:tdatetime):string;overload;
 implementation
+function getDataTimeString(dt:tdatetime):string;
+var
+  s:string;
+begin
+  result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',dt);
+end;
+function getDataTimeString():string;
+var
+  s:string;
+begin
+  result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',now());
+end;
 function gets(p:pointer;dwSize:DWORD):string;
 var
   ms:TMemoryStream;
   ss:tstrings;
 begin
+  result:='';
+  if(debug)then exit;
+
   ms := TMemoryStream.Create;
   ss:=tstringlist.Create;
   ms.Write(p^,dwSize);

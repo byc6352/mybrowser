@@ -12,6 +12,7 @@ var
   mDowns:tstrings;
   mForm:HWND;
   mPage,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+
 function DownloadToFile(Source, Dest: string): Boolean; //uses urlmon;
 procedure downloadfile(url:string); //下载指定链接的文件
 function url2file(url:string):string;//链接转换为本地文件路径
@@ -26,6 +27,7 @@ procedure addUrl(url:string);
 procedure setWorkDir(workDir:string);
 procedure setHost(protocol,site:string);
 function getPort(url:string):string;
+procedure clear;
 implementation
 //------------------------------------------启动，暂停，停止区---------------------------------
 procedure stop();

@@ -6,6 +6,7 @@ uses
 const
   APP_NAME='ÎÒµÄä¯ÀÀÆ÷';
   APP_VERSION='1.00';
+  DEBUG=true;
 var
   workdir:string;
 procedure init();

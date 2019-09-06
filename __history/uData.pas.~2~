@@ -1,0 +1,26 @@
+unit uData;
+
+interface
+uses
+  windows;
+const
+  MAX_RECORD=10000;//最大记录数；
+type
+  stData=record
+    hRequest:DWORD;
+    dt:tdatetime; //时间
+    url:string;   //请求对象
+    verb:string;  //请求方法
+    len:string;   //数据长度
+    qHeader:string; //讲求头
+    rHeader:string; //返回头
+    qData:string; //发送数据
+    rData:string; //返回数据
+  end;
+
+var
+  datas:array[0..MAX_RECORD] of stData;
+  iData:integer;//当前记录指针；
+implementation
+
+end.
