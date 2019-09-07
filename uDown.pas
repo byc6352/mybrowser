@@ -11,7 +11,7 @@ var
   bDownFiles,bPause:boolean;//下载工作线程变量；
   mDowns:tstrings;
   mForm:HWND;
-  mPage,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+  mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
 
 function DownloadToFile(Source, Dest: string): Boolean; //uses urlmon;
 procedure downloadfile(url:string); //下载指定链接的文件
@@ -114,9 +114,9 @@ begin
   remotepath:=url;
   if pos('/',remotepath)=1 then begin
     if(mPort='')then
-      remotepath:=mProtocol+msite+remotepath
+      remotepath:=mProtocol+'://'+msite+remotepath
     else
-      remotepath:=mProtocol+msite+':'+mPort+remotepath;
+      remotepath:=mProtocol+'://'+msite+':'+mPort+remotepath;
   end;
   if(rightstr(remotepath,1)='/')then remotepath:=remotepath+'index.htm';
   localpath:=url2file(remotepath);

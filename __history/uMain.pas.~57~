@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
   Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi,uData,
-  Vcl.Buttons;
+  Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids;
 
 type
   TfMain = class(TForm)
@@ -35,6 +35,14 @@ type
     btnBack: TBitBtn;
     btnForward: TBitBtn;
     btnBrush: TBitBtn;
+    nOpenRequestData: TMenuItem;
+    n1: TMenuItem;
+    nOpenResponseData: TMenuItem;
+    Timer1: TTimer;
+    tsRecord: TTabSheet;
+    DBGrid1: TDBGrid;
+    DBGrid2: TDBGrid;
+    Splitter3: TSplitter;
     procedure FormShow(Sender: TObject);
     procedure Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
       const URL: OleVariant);
@@ -57,9 +65,12 @@ type
     procedure edturlEnter(Sender: TObject);
     procedure btnBackClick(Sender: TObject);
     procedure btnForwardClick(Sender: TObject);
+    procedure nOpenRequestDataClick(Sender: TObject);
+    procedure nOpenResponseDataClick(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
-
+    bProcessData:boolean;
     procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
     procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
     procedure getResource();
@@ -72,8 +83,6 @@ type
 var
   fMain: TfMain;
 
-  function getDataTimeString():string;
-
 implementation
 
 {$R *.dfm}
@@ -81,12 +90,25 @@ procedure TfMain.getDataToShow();
 var
   data:TListItem;
   i:integer;
+  pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string;
 begin
+  if(bProcessData)then exit;
   while listData.Items.Count<uData.iData do
   begin
+    bProcessData:=true;
+    pageID:=mPageIdx;
+    dt:=ufuncs.getDataTimeString(uData.datas[i].dt);
+    verb:=uData.datas[i].verb;
+    url:=uData.datas[i].url;
+    len:=uData.datas[i].len;
+    qHeader:=uData.datas[i].qHeader;
+    rHeader:=uData.datas[i].rHeader;
+    qData:=uData.datas[i].qData;
+    rData:=uData.datas[i].rData;
+
     i:=listData.Items.Count;
     data:=listData.Items.Add;
-    data.Caption:=getDataTimeString(uData.datas[i].dt);
+    data.Caption:=dt;
     data.SubItems.Add(uData.datas[i].verb);
     data.SubItems.Add(uData.datas[i].url);
     data.SubItems.Add(uData.datas[i].len);
@@ -94,9 +116,13 @@ begin
     data.SubItems.Add(uData.datas[i].rHeader);
     data.SubItems.Add(uData.datas[i].qData);
     data.SubItems.Add(uData.datas[i].rData);
-    if(chkDownAll.Checked)then uDown.addUrl(uData.datas[i].url);
+    if(chkDownAll.Checked)then begin
+      uDown.addUrl(uData.datas[i].url);
+      dm.InsertPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData);
+    end;
     application.ProcessMessages;
   end;
+  bProcessData:=false;
 end;
 function TfMain.findResource(url:string):boolean;
 const
@@ -152,7 +178,7 @@ begin
 end;
 procedure TfMain.edturlEnter(Sender: TObject);
 begin
-  btnBrash.click();
+  //btnBrush.click();
 end;
 
 procedure TfMain.httpMessage(var msg:TMessage);
@@ -196,13 +222,40 @@ begin
   ShellExecute(Handle,'open','Explorer.exe',pchar(localdir),nil,1);
 end;
 
+procedure TfMain.nOpenRequestDataClick(Sender: TObject);
+var
+  data,localdir:string;
+begin
+  data:=listdata.Selected.SubItems[5];
+  if(data='')then exit;
+  ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
+
+end;
+
+procedure TfMain.nOpenResponseDataClick(Sender: TObject);
+var
+  data,localdir:string;
+begin
+  data:=listdata.Selected.SubItems[6];
+  if(data='')then exit;
+  ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
+
+end;
+
+procedure TfMain.Timer1Timer(Sender: TObject);
+begin
+  getDataToShow();
+end;
+
 procedure TfMain.btnBackClick(Sender: TObject);
 begin
+  page2.ActivePageIndex:=0;
   web1.GoBack;
 end;
 
 procedure TfMain.btnBrushClick(Sender: TObject);
 begin
+  page2.ActivePageIndex:=0;
   web1.Navigate(trim(edtUrl.Text));
   btnBack.Enabled:=true;
   btnForward.Enabled:=true;
@@ -221,6 +274,7 @@ end;
 
 procedure TfMain.btnForwardClick(Sender: TObject);
 begin
+  page2.ActivePageIndex:=0;
   web1.GoForward;
 end;
 
@@ -232,7 +286,7 @@ end;
 procedure TfMain.FormShow(Sender: TObject);
 begin
   //uhookweb.hForm:=fmain.Handle; //
-  getDataToShow();
+  timer1.Enabled:=false;
   uDown.start(uConfig.workdir,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
@@ -244,6 +298,7 @@ procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
 begin
   uDown.pause();
   uHookweb.state:=STAT_BROWSING;
+  timer1.Enabled:=false;
   bar1.Panels[0].Text:='正在加载页面...';
 end;
 
@@ -252,8 +307,9 @@ procedure TfMain.Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
 var
   doc:IHTMLDocument2;
 begin
-  if not assigned(web1.Document) then exit;
-  if(web1.Busy)then exit;
+  if(Web1.ReadyState<>READYSTATE_COMPLETE)then exit;
+  //if not assigned(web1.Document) then exit;
+  //if(web1.Busy)then exit;
 
   doc:=web1.Document as IHTMLDocument2;
   getPageCode(doc,memcode.Lines);
@@ -262,7 +318,7 @@ begin
   mPort:=getPort(mPage);
   msite:=doc.domain;
   mProtocol:=doc.protocol;
-  if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https://' else mProtocol:='http://';
+  if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https' else mProtocol:='http';
 
   edturl.Text:=mpage;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
@@ -274,8 +330,10 @@ begin
     uDown.setHost(mprotocol,msite);
     uDown.addUrl(mPage);
     uDown.start();
+    mpageIdx:=dm.InsertPageInfo(mProtocol,msite,mPort,mpage);
+    timer1.Enabled:=true;
   end;
-  getResource();
+  //getResource();
 
 end;
 

@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
   Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi,uData,
-  Vcl.Buttons;
+  Vcl.Buttons,uFuncs;
 
 type
   TfMain = class(TForm)
@@ -35,6 +35,10 @@ type
     btnBack: TBitBtn;
     btnForward: TBitBtn;
     btnBrush: TBitBtn;
+    nOpenRequestData: TMenuItem;
+    n1: TMenuItem;
+    nOpenResponseData: TMenuItem;
+    Timer1: TTimer;
     procedure FormShow(Sender: TObject);
     procedure Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
       const URL: OleVariant);
@@ -55,6 +59,11 @@ type
     procedure nOpenDirClick(Sender: TObject);
     procedure btnBrushClick(Sender: TObject);
     procedure edturlEnter(Sender: TObject);
+    procedure btnBackClick(Sender: TObject);
+    procedure btnForwardClick(Sender: TObject);
+    procedure nOpenRequestDataClick(Sender: TObject);
+    procedure nOpenResponseDataClick(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
 
@@ -70,8 +79,6 @@ type
 var
   fMain: TfMain;
 
-  function getDataTimeString():string;
-
 implementation
 
 {$R *.dfm}
@@ -80,11 +87,12 @@ var
   data:TListItem;
   i:integer;
 begin
+  timer1.Enabled:=false;
   while listData.Items.Count<uData.iData do
   begin
     i:=listData.Items.Count;
     data:=listData.Items.Add;
-    data.Caption:=getDataTimeString(uData.datas[i].dt);
+    data.Caption:=ufuncs.getDataTimeString(uData.datas[i].dt);
     data.SubItems.Add(uData.datas[i].verb);
     data.SubItems.Add(uData.datas[i].url);
     data.SubItems.Add(uData.datas[i].len);
@@ -95,6 +103,7 @@ begin
     if(chkDownAll.Checked)then uDown.addUrl(uData.datas[i].url);
     application.ProcessMessages;
   end;
+  if(state=STAT_IDLE)then timer1.Enabled:=true;
 end;
 function TfMain.findResource(url:string):boolean;
 const
@@ -150,7 +159,7 @@ begin
 end;
 procedure TfMain.edturlEnter(Sender: TObject);
 begin
-  btnBrash.click();
+  //btnBrush.click();
 end;
 
 procedure TfMain.httpMessage(var msg:TMessage);
@@ -194,9 +203,41 @@ begin
   ShellExecute(Handle,'open','Explorer.exe',pchar(localdir),nil,1);
 end;
 
+procedure TfMain.nOpenRequestDataClick(Sender: TObject);
+var
+  data,localdir:string;
+begin
+  data:=listdata.Selected.SubItems[5];
+  if(data='')then exit;
+  ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
+
+end;
+
+procedure TfMain.nOpenResponseDataClick(Sender: TObject);
+var
+  data,localdir:string;
+begin
+  data:=listdata.Selected.SubItems[6];
+  if(data='')then exit;
+  ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
+
+end;
+
+procedure TfMain.Timer1Timer(Sender: TObject);
+begin
+  getDataToShow();
+end;
+
+procedure TfMain.btnBackClick(Sender: TObject);
+begin
+  web1.GoBack;
+end;
+
 procedure TfMain.btnBrushClick(Sender: TObject);
 begin
   web1.Navigate(trim(edtUrl.Text));
+  btnBack.Enabled:=true;
+  btnForward.Enabled:=true;
 end;
 
 procedure TfMain.btnClearClick(Sender: TObject);
@@ -210,6 +251,11 @@ begin
   end;
 end;
 
+procedure TfMain.btnForwardClick(Sender: TObject);
+begin
+  web1.GoForward;
+end;
+
 procedure TfMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   uDown.stop;
@@ -218,7 +264,7 @@ end;
 procedure TfMain.FormShow(Sender: TObject);
 begin
   //uhookweb.hForm:=fmain.Handle; //
-  getDataToShow();
+  timer1.Enabled:=false;
   uDown.start(uConfig.workdir,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;

@@ -217,10 +217,9 @@ object fMain: TfMain
       Top = 1
       Width = 786
       Height = 628
-      ActivePage = tsweb
+      ActivePage = tsRecord
       Align = alClient
       TabOrder = 1
-      ExplicitHeight = 625
       object tsweb: TTabSheet
         Caption = #27983#35272#22120
         ExplicitWidth = 281
@@ -277,6 +276,50 @@ object fMain: TfMain
           TabOrder = 0
           ExplicitWidth = 281
           ExplicitHeight = 752
+        end
+      end
+      object tsRecord: TTabSheet
+        Caption = #21382#21490#35760#24405
+        ImageIndex = 2
+        ExplicitLeft = 3
+        ExplicitTop = 22
+        object Splitter3: TSplitter
+          Left = 0
+          Top = 120
+          Width = 778
+          Height = 3
+          Cursor = crVSplit
+          Align = alTop
+          ExplicitWidth = 480
+        end
+        object DBGrid1: TDBGrid
+          Left = 0
+          Top = 0
+          Width = 778
+          Height = 120
+          Align = alTop
+          DataSource = dm.dsPage
+          TabOrder = 0
+          TitleFont.Charset = DEFAULT_CHARSET
+          TitleFont.Color = clWindowText
+          TitleFont.Height = -11
+          TitleFont.Name = 'Tahoma'
+          TitleFont.Style = []
+        end
+        object DBGrid2: TDBGrid
+          Left = 0
+          Top = 123
+          Width = 778
+          Height = 477
+          Align = alClient
+          DataSource = dm.dsDetail
+          TabOrder = 1
+          TitleFont.Charset = DEFAULT_CHARSET
+          TitleFont.Color = clWindowText
+          TitleFont.Height = -11
+          TitleFont.Name = 'Tahoma'
+          TitleFont.Style = []
+          OnCellClick = DBGrid2CellClick
         end
       end
     end

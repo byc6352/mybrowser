@@ -7,13 +7,11 @@ const
   APP_NAME='我的浏览器';
   APP_VERSION='1.00';
   DEBUG=true;
-  DB_NAME:string='web.mdb';
+  DB_NAME:string='author.mdb';
   WORK_DIR='web';
-  LOG_NAME:string='webLog.txt';
 var
   workdir:string;
   dbfile,dbConn,logfile:string;// 数据库子目录,数据库
-  isInit:boolean=false;
 procedure init();
 implementation
 procedure init();
@@ -21,11 +19,9 @@ var
   me:string;
 begin
   //me:=application.ExeName;
-  isInit:=true;
   me:=ParamStr(0);
   workdir:=extractfilepath(me)+WORK_DIR;
   if(not directoryexists(workdir))then forcedirectories(workdir);
-  logfile:=workdir+'\'+LOG_NAME;
   dbfile:=workdir+'\'+DB_NAME;
   //D:\works\delphi\authserver\Win32\Debug\database\author.mdb
   dbConn := 'Provider = MicroSoft.jet.OLEDB.4.0;'+

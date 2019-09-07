@@ -1,0 +1,29 @@
+object dm: Tdm
+  OldCreateOrder = False
+  Height = 150
+  Width = 215
+  object ds1: TDataSource
+    Left = 24
+    Top = 16
+  end
+  object conn: TADOConnection
+    Left = 80
+    Top = 16
+  end
+  object Q1: TADOQuery
+    Connection = conn
+    Parameters = <>
+    Left = 152
+    Top = 16
+  end
+  object tPage: TADOTable
+    Connection = conn
+    Left = 16
+    Top = 72
+  end
+  object tPageDetail: TADOTable
+    Connection = conn
+    Left = 96
+    Top = 72
+  end
+end

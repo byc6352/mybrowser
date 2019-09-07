@@ -9,8 +9,7 @@ uses
   uConfig in 'uConfig.pas',
   uCoding in 'uCoding.pas',
   uData in 'uData.pas',
-  uDatabase in 'uDatabase.pas',
-  uDM in 'uDM.pas' {dm: TDataModule};
+  uDatabase in 'uDatabase.pas';
 
 {$R *.res}
 
@@ -18,6 +17,5 @@ begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
   Application.CreateForm(TfMain, fMain);
-  Application.CreateForm(Tdm, dm);
   Application.Run;
 end.

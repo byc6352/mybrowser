@@ -13,7 +13,6 @@ const
 var
   workdir:string;
   dbfile,dbConn,logfile:string;// 数据库子目录,数据库
-  isInit:boolean=false;
 procedure init();
 implementation
 procedure init();
@@ -21,7 +20,6 @@ var
   me:string;
 begin
   //me:=application.ExeName;
-  isInit:=true;
   me:=ParamStr(0);
   workdir:=extractfilepath(me)+WORK_DIR;
   if(not directoryexists(workdir))then forcedirectories(workdir);

@@ -38,6 +38,7 @@ type
     nOpenRequestData: TMenuItem;
     n1: TMenuItem;
     nOpenResponseData: TMenuItem;
+    Timer1: TTimer;
     procedure FormShow(Sender: TObject);
     procedure Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
       const URL: OleVariant);
@@ -62,6 +63,7 @@ type
     procedure btnForwardClick(Sender: TObject);
     procedure nOpenRequestDataClick(Sender: TObject);
     procedure nOpenResponseDataClick(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
 
@@ -85,8 +87,7 @@ var
   data:TListItem;
   i:integer;
 begin
-  while True do
-  begin
+  timer1.Enabled:=false;
   while listData.Items.Count<uData.iData do
   begin
     i:=listData.Items.Count;
@@ -102,8 +103,7 @@ begin
     if(chkDownAll.Checked)then uDown.addUrl(uData.datas[i].url);
     application.ProcessMessages;
   end;
-    application.ProcessMessages;
-  end;
+  timer1.Enabled:=true;
 end;
 function TfMain.findResource(url:string):boolean;
 const
@@ -159,7 +159,7 @@ begin
 end;
 procedure TfMain.edturlEnter(Sender: TObject);
 begin
-  btnBrush.click();
+  //btnBrush.click();
 end;
 
 procedure TfMain.httpMessage(var msg:TMessage);
@@ -223,6 +223,11 @@ begin
 
 end;
 
+procedure TfMain.Timer1Timer(Sender: TObject);
+begin
+  getDataToShow();
+end;
+
 procedure TfMain.btnBackClick(Sender: TObject);
 begin
   web1.GoBack;
@@ -259,7 +264,7 @@ end;
 procedure TfMain.FormShow(Sender: TObject);
 begin
   //uhookweb.hForm:=fmain.Handle; //
-  getDataToShow();
+
   uDown.start(uConfig.workdir,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
