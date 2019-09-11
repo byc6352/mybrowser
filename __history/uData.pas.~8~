@@ -10,10 +10,10 @@ const
 type
   stData=record
     wRequest:DWORD;
-    ServerPort:DWORD;
+    port:DWORD;
     dt:tdatetime; //时间
     ServerName:string;//服务器名称；
-    ObjectName:string;   //请求对象
+    url:string;   //请求对象
     verb:string;  //请求方法
     len:string;   //数据长度
     qHeader:string; //讲求头
@@ -23,7 +23,7 @@ type
   end;
 stServer=record  //服务器信息；
   wConnect:DWORD;
-  ServerPort:DWORD;
+  port:DWORD;
   ServerName:string;//服务器名称；
 end;
 
@@ -33,7 +33,7 @@ var
   iData:integer;//当前记录指针；
 
 
-function addUrl(wConnect,wRequest:DWORD;ObjectName:string;verb:string):integer;
+function addUrl(wConnect,wRequest:DWORD;url:string;verb:string):integer;
   //添加qHeader,rHeader,len;
 function addHeader(wRequest:DWORD;qHeader:string;rHeader:string;len:string):integer;
 //添加addData;
@@ -43,15 +43,15 @@ procedure clear;
 
 implementation
 //添加URL,verb;
-function addUrl(wConnect,wRequest:DWORD;ObjectName:string;verb:string):integer;
+function addUrl(wConnect,wRequest:DWORD;url:string;verb:string):integer;
 begin
   if(wConnect=server.wConnect)then begin
     datas[iData].ServerName:=server.ServerName;
-    datas[iData].ServerPort:=server.ServerPort;
+    datas[iData].port:=server.port;
   end;
   datas[iData].wRequest:=wRequest;
   datas[iData].dt:=now();
-  datas[iData].ObjectName:=ObjectName;
+  datas[iData].url:=url;
   datas[iData].verb:=verb;
   iData:=iData+1;
   if(iData>=MAX_RECORD)then iData:=0;

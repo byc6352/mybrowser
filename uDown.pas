@@ -2,7 +2,7 @@ unit uDown;
 
 interface
 uses
-  windows,sysutils,strutils,classes,urlmon,Messages;
+  windows,sysutils,strutils,classes,urlmon,Messages,uLog;
 
 Const
   WM_DOWN_FILE = WM_USER+1002;
@@ -11,7 +11,8 @@ var
   bDownFiles,bPause:boolean;//下载工作线程变量；
   mDowns:tstrings;
   mForm:HWND;
-  mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+  //mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+  mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
 
 function DownloadToFile(Source, Dest: string): Boolean; //uses urlmon;
 procedure downloadfile(url:string); //下载指定链接的文件
@@ -25,7 +26,6 @@ procedure start();overload;
 procedure start(workdir:string;hForm:HWND);overload;
 procedure addUrl(url:string);
 procedure setWorkDir(workDir:string);
-procedure setHost(protocol,site:string);
 function getPort(url:string):string;
 procedure clear;
 implementation
@@ -47,7 +47,6 @@ end;
 procedure start();
 begin
   bPause:=false;
-  //if not assigned(mDowns) then mDowns:=tstringlist.Create;
   downloadFilesThread();
 end;
 procedure clear();
@@ -64,11 +63,7 @@ procedure setWorkDir(workDir:string);
 begin
   mWorkDir:=workDir;
 end;
-procedure setHost(protocol,site:string);
-begin
-  mprotocol:=protocol;
-  msite:=site;
-end;
+
 //------------------------------------------下载线程区------------------------------------------
 function ThreadProc(param: LPVOID): DWORD; stdcall;
 var
@@ -112,16 +107,13 @@ var
   localpath,remotepath:string;
 begin
   remotepath:=url;
-  if pos('/',remotepath)=1 then begin
-    if(mPort='')then
-      remotepath:=mProtocol+'://'+msite+remotepath
-    else
-      remotepath:=mProtocol+'://'+msite+':'+mPort+remotepath;
-  end;
   if(rightstr(remotepath,1)='/')then remotepath:=remotepath+'index.htm';
   localpath:=url2file(remotepath);
   if(fileexists(localpath))then exit;
-  DownloadToFile(remotepath,localpath);
+  if(DownloadToFile(remotepath,localpath))then
+    Log('suc:'+remotepath+#13#10+localpath)
+  else
+    Log('fal:'+remotepath+#13#10+localpath);
 end;
 //链接转换为本地文件路径
 function url2file(url:string):string;
@@ -132,15 +124,11 @@ begin
   s:=url;
   fullDir:=mworkdir;  //程序工作目录；
   if(rightstr(s,1)='/')then s:=s+'index.htm';
-  p:=pos(mPort,s);
-  if(p>0)then delete(s,p-1,length(mPort)+1);
   p:=pos('/',s);
   dir:=leftstr(s,p-1);
   if(dir='http:')then s:=rightstr(s,length(s)-7);  //去除http头部
   if(dir='https:')then s:=rightstr(s,length(s)-8);  //去除https头部
-  p:=pos('/',s);
-  dir:=leftstr(s,p-1);
-  if(dir<>msite)then s:=msite+s;  //添加主站地址
+  if pos(':',s)>0 then s:=replacestr(s,':','/');
 
   p:=pos('/',s);
   while p>0 do begin

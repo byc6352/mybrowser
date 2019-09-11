@@ -10,7 +10,7 @@ const
 type
   stData=record
     wRequest:DWORD;
-    ServerPort:DWORD;
+    port:DWORD;
     dt:tdatetime; //时间
     ServerName:string;//服务器名称；
     ObjectName:string;   //请求对象
@@ -47,7 +47,7 @@ function addUrl(wConnect,wRequest:DWORD;ObjectName:string;verb:string):integer;
 begin
   if(wConnect=server.wConnect)then begin
     datas[iData].ServerName:=server.ServerName;
-    datas[iData].ServerPort:=server.ServerPort;
+    datas[iData].port:=server.ServerPort;
   end;
   datas[iData].wRequest:=wRequest;
   datas[iData].dt:=now();

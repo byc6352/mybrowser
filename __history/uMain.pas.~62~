@@ -68,6 +68,7 @@ type
     procedure nOpenRequestDataClick(Sender: TObject);
     procedure nOpenResponseDataClick(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
+    procedure DBGrid2CellClick(Column: TColumn);
   private
     { Private declarations }
     bProcessData:boolean;
@@ -90,14 +91,26 @@ procedure TfMain.getDataToShow();
 var
   data:TListItem;
   i:integer;
+  pageID,url,verb,len,qHeader,rHeader,qData,rData:string;
+  dtGet:tdatetime;
 begin
-  timer1.Enabled:=false;
+  if(bProcessData)then exit;
   while listData.Items.Count<uData.iData do
   begin
     bProcessData:=true;
+    pageID:=mPageIdx;
+    dtGet:=uData.datas[i].dt;
+    verb:=uData.datas[i].verb;
+    url:=uData.datas[i].url;
+    len:=uData.datas[i].len;
+    qHeader:=uData.datas[i].qHeader;
+    rHeader:=uData.datas[i].rHeader;
+    qData:=uData.datas[i].qData;
+    rData:=uData.datas[i].rData;
+
     i:=listData.Items.Count;
     data:=listData.Items.Add;
-    data.Caption:=ufuncs.getDataTimeString(uData.datas[i].dt);
+    data.Caption:=ufuncs.getDataTimeString(dtGet);
     data.SubItems.Add(uData.datas[i].verb);
     data.SubItems.Add(uData.datas[i].url);
     data.SubItems.Add(uData.datas[i].len);
@@ -107,12 +120,11 @@ begin
     data.SubItems.Add(uData.datas[i].rData);
     if(chkDownAll.Checked)then begin
       uDown.addUrl(uData.datas[i].url);
-      dm.in
+      dm.addPageDetail(pageID,url,verb,len,qHeader,rHeader,qData,rData,dtGet);
     end;
-    application.ProcessMessages;
+    //application.ProcessMessages;
   end;
   bProcessData:=false;
-  if(state=STAT_IDLE)then timer1.Enabled:=true;
 end;
 function TfMain.findResource(url:string):boolean;
 const
@@ -268,6 +280,28 @@ begin
   web1.GoForward;
 end;
 
+procedure TfMain.DBGrid2CellClick(Column: TColumn);
+begin
+  memData.Clear;
+  memData.Lines.Add('-------------request target ---------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('target_url').AsString);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request length---------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('data_len').AsString);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request headers---------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('request_header').AsString);
+  memData.Lines.Add('------------response headers---------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('response_header').AsString);
+  memData.Lines.Add('-------------request data------------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('request_data').AsString);
+  memData.Lines.Add('-------------response data-----------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('response_data').AsString);
+  //memoinfo.Lines.Add(dm.tPageDetail.FieldByName('request_header').AsString);
+end;
+
 procedure TfMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   uDown.stop;
@@ -297,28 +331,31 @@ procedure TfMain.Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
 var
   doc:IHTMLDocument2;
 begin
-  if not assigned(web1.Document) then exit;
-  if(web1.Busy)then exit;
+  if(Web1.ReadyState<>READYSTATE_COMPLETE)then exit;
+  //if not assigned(web1.Document) then exit;
+  //if(web1.Busy)then exit;
 
   doc:=web1.Document as IHTMLDocument2;
   getPageCode(doc,memcode.Lines);
   //doc.designMode:='On';
   mPage:=doc.url;
   mPort:=getPort(mPage);
+
   msite:=doc.domain;
   mProtocol:=doc.protocol;
-  if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https://' else mProtocol:='http://';
+  if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https' else mProtocol:='http';
 
   edturl.Text:=mpage;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
   uHookweb.state:=STAT_IDLE;
-  bar1.Panels[0].Text:='页面加载完毕！共有：'+inttostr(listdata.Items.Count)+'项！';
+  bar1.Panels[0].Text:='页面加载完毕！';
 
 
   if(chkDownAll.Checked)then begin
     uDown.setHost(mprotocol,msite);
     uDown.addUrl(mPage);
     uDown.start();
+    mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
     timer1.Enabled:=true;
   end;
   //getResource();

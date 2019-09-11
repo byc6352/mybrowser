@@ -22,7 +22,7 @@ begin
   str_sep:=midstr(str_datetime,5,1);
   sys_sep:=fmt.DateSeparator;
   tmp_str:=replacestr(str_datetime,str_sep,sys_sep);
-  result:=strtodatetime(tmp_str);
+  result:=strtodatetime(str_datetime);
 end;
 function getDataTimeString(dt:tdatetime):string;
 var

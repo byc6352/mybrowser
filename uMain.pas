@@ -72,56 +72,84 @@ type
   private
     { Private declarations }
     bProcessData:boolean;
+    mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
     procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
     procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
     procedure getResource();
     function findResource(url:string):boolean;
     procedure getDataToShow();
+
   public
     { Public declarations }
   end;
 
 var
   fMain: TfMain;
-
+  function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
 implementation
 
 {$R *.dfm}
+function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
+var
+  protocol:string;
+begin
+  case ServerPort of
+  80:begin
+    protocol:='http';
+    result:=protocol+'://'+ServerName+ObjectName;
+  end;
+  443:begin
+    protocol:='https';
+    result:=protocol+'://'+ServerName+ObjectName;
+  end;
+  else begin
+    protocol:='http';
+    result:=protocol+'://'+ServerName+':'+inttostr(ServerPort)+ObjectName;
+  end;
+  end;
+end;
 procedure TfMain.getDataToShow();
 var
   data:TListItem;
-  i:integer;
-  pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string;
+  i,j:integer;
+  pageID,url,ObjectName,verb,len,qHeader,rHeader,qData,rData,ServerName:string;
+  ServerPort:DWORD;
+  dtGet:tdatetime;
 begin
   if(bProcessData)then exit;
   while listData.Items.Count<uData.iData do
   begin
     bProcessData:=true;
+    i:=listData.Items.Count;
     pageID:=mPageIdx;
-    dt:=ufuncs.getDataTimeString(uData.datas[i].dt);
+    dtGet:=uData.datas[i].dt;
     verb:=uData.datas[i].verb;
-    url:=uData.datas[i].url;
+    ObjectName:=uData.datas[i].ObjectName;
     len:=uData.datas[i].len;
     qHeader:=uData.datas[i].qHeader;
     rHeader:=uData.datas[i].rHeader;
     qData:=uData.datas[i].qData;
     rData:=uData.datas[i].rData;
+    ServerName:=uData.datas[i].ServerName;
+    ServerPort:=uData.datas[i].ServerPort;
 
-    i:=listData.Items.Count;
     data:=listData.Items.Add;
-    data.Caption:=dt;
-    data.SubItems.Add(uData.datas[i].verb);
-    data.SubItems.Add(uData.datas[i].url);
-    data.SubItems.Add(uData.datas[i].len);
-    data.SubItems.Add(uData.datas[i].qHeader);
-    data.SubItems.Add(uData.datas[i].rHeader);
-    data.SubItems.Add(uData.datas[i].qData);
-    data.SubItems.Add(uData.datas[i].rData);
+    data.Caption:=ufuncs.getDataTimeString(dtGet);
+    data.SubItems.Add(ServerName);
+    data.SubItems.Add(inttostr(ServerPort));
+    data.SubItems.Add(verb);
+    data.SubItems.Add(ObjectName);
+    data.SubItems.Add(len);
+    data.SubItems.Add(qHeader);
+    data.SubItems.Add(rHeader);
+    data.SubItems.Add(qData);
+    data.SubItems.Add(rData);
     if(chkDownAll.Checked)then begin
-      uDown.addUrl(uData.datas[i].url);
-      dm.addPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData);
+      url:=MergeUrl(Servername,ObjectName,Serverport);
+      uDown.addUrl(url);
+      dm.addPageDetail(pageID,servername,inttostr(ServerPort),ObjectName,verb,len,qHeader,rHeader,qData,rData,dtGet);
     end;
-    application.ProcessMessages;
+    //application.ProcessMessages;
   end;
   bProcessData:=false;
 end;
@@ -146,7 +174,7 @@ begin
   if(listdata.Items.Count=0)then exit;
   ss:=tstringlist.Create;
   for i:=0 to listdata.Items.Count-1 do begin
-    url:=listdata.Items.Item[i].SubItems[1];
+    url:=listdata.Items.Item[i].SubItems[3];
     if(findResource(url))then ss.Add(url);
   end;
   if(ss.Count>0)then memoinfo.Lines.AddStrings(ss);
@@ -195,29 +223,30 @@ procedure TfMain.listDataSelectItem(Sender: TObject; Item: TListItem;
 begin
   memData.Clear;
   memData.Lines.Add('-------------request target ---------------');
-  memData.Lines.Add(item.SubItems[1]);
+  memData.Lines.Add(item.SubItems[3]);
   memData.Lines.Add('');
   memData.Lines.Add('');
   memData.Lines.Add('-------------request length---------------');
-  memData.Lines.Add(item.SubItems[2]);
+  memData.Lines.Add(item.SubItems[4]);
   memData.Lines.Add('');
   memData.Lines.Add('');
   memData.Lines.Add('-------------request headers---------------');
-  memData.Lines.Add(item.SubItems[3]);
-  memData.Lines.Add('------------response headers---------------');
-  memData.Lines.Add(item.SubItems[4]);
-  memData.Lines.Add('-------------request data------------------');
   memData.Lines.Add(item.SubItems[5]);
-  memData.Lines.Add('-------------response data-----------------');
+  memData.Lines.Add('------------response headers---------------');
   memData.Lines.Add(item.SubItems[6]);
+  memData.Lines.Add('-------------request data------------------');
+  memData.Lines.Add(item.SubItems[7]);
+  memData.Lines.Add('-------------response data-----------------');
+  memData.Lines.Add(item.SubItems[8]);
 end;
 
 procedure TfMain.nOpenDirClick(Sender: TObject);
 var
-  url,localdir:string;
+  url,localdir,objectName,serverName:string;
 begin
-  url:=listdata.Selected.SubItems[1];
-  if pos(mSite,url)<=0 then url:=mSite+url;
+  objectName:=listdata.Selected.SubItems[3];
+  serverName:=listdata.Selected.SubItems[0];
+  if pos(serverName,objectName)<=0 then url:=serverName+objectName;
   localdir:=uDown.url2file(url);
   localdir:=extractfiledir(localdir);
   ShellExecute(Handle,'open','Explorer.exe',pchar(localdir),nil,1);
@@ -227,7 +256,7 @@ procedure TfMain.nOpenRequestDataClick(Sender: TObject);
 var
   data,localdir:string;
 begin
-  data:=listdata.Selected.SubItems[5];
+  data:=listdata.Selected.SubItems[7];
   if(data='')then exit;
   ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
 
@@ -237,7 +266,7 @@ procedure TfMain.nOpenResponseDataClick(Sender: TObject);
 var
   data,localdir:string;
 begin
-  data:=listdata.Selected.SubItems[6];
+  data:=listdata.Selected.SubItems[8];
   if(data='')then exit;
   ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
 
@@ -282,8 +311,13 @@ end;
 procedure TfMain.DBGrid2CellClick(Column: TColumn);
 begin
   memData.Clear;
+  memData.Lines.Add('-------------server ---------------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('server_name').AsString);
+  memData.Lines.Add(dm.tPageDetail.FieldByName('server_port').AsString);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
   memData.Lines.Add('-------------request target ---------------');
-  memData.Lines.Add(dm.tPageDetail.FieldByName('target_url').AsString);
+  memData.Lines.Add(dm.tPageDetail.FieldByName('object_name').AsString);
   memData.Lines.Add('');
   memData.Lines.Add('');
   memData.Lines.Add('-------------request length---------------');
@@ -293,7 +327,7 @@ begin
   memData.Lines.Add('-------------request headers---------------');
   memData.Lines.Add(dm.tPageDetail.FieldByName('request_header').AsString);
   memData.Lines.Add('------------response headers---------------');
-  memData.Lines.Add(dm.tPageDetail.FieldByName('reponse_header').AsString);
+  memData.Lines.Add(dm.tPageDetail.FieldByName('response_header').AsString);
   memData.Lines.Add('-------------request data------------------');
   memData.Lines.Add(dm.tPageDetail.FieldByName('request_data').AsString);
   memData.Lines.Add('-------------response data-----------------');
@@ -339,6 +373,7 @@ begin
   //doc.designMode:='On';
   mPage:=doc.url;
   mPort:=getPort(mPage);
+
   msite:=doc.domain;
   mProtocol:=doc.protocol;
   if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https' else mProtocol:='http';
@@ -350,10 +385,9 @@ begin
 
 
   if(chkDownAll.Checked)then begin
-    uDown.setHost(mprotocol,msite);
     uDown.addUrl(mPage);
     uDown.start();
-    mpageIdx:=dm.InsertPageInfo(mProtocol,msite,mPort,mpage);
+    mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
     timer1.Enabled:=true;
   end;
   //getResource();

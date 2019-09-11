@@ -9,11 +9,9 @@ const
   DATA_TYPE_REPONSE=1;//返回的数据；
 type
   stData=record
-    wRequest:DWORD;
-    ServerPort:DWORD;
+    hRequest:DWORD;
     dt:tdatetime; //时间
-    ServerName:string;//服务器名称；
-    ObjectName:string;   //请求对象
+    url:string;   //请求对象
     verb:string;  //请求方法
     len:string;   //数据长度
     qHeader:string; //讲求头
@@ -21,59 +19,49 @@ type
     qData:string; //发送数据
     rData:string; //返回数据
   end;
-stServer=record  //服务器信息；
-  wConnect:DWORD;
-  ServerPort:DWORD;
-  ServerName:string;//服务器名称；
-end;
 
 var
-  server:stServer;
   datas:array[0..MAX_RECORD] of stData;
   iData:integer;//当前记录指针；
 
 
-function addUrl(wConnect,wRequest:DWORD;ObjectName:string;verb:string):integer;
+function addUrl(hRequest:DWORD;url:string;verb:string):integer;
   //添加qHeader,rHeader,len;
-function addHeader(wRequest:DWORD;qHeader:string;rHeader:string;len:string):integer;
+function addHeader(hRequest:DWORD;qHeader:string;rHeader:string;len:string):integer;
 //添加addData;
-function addData(wRequest:DWORD;dType:DWORD;p:pointer;len:DWORD):integer;
+function addData(hRequest:DWORD;dType:DWORD;p:pointer;len:DWORD):integer;
 //
 procedure clear;
 
 implementation
 //添加URL,verb;
-function addUrl(wConnect,wRequest:DWORD;ObjectName:string;verb:string):integer;
+function addUrl(hRequest:DWORD;url:string;verb:string):integer;
 begin
-  if(wConnect=server.wConnect)then begin
-    datas[iData].ServerName:=server.ServerName;
-    datas[iData].ServerPort:=server.ServerPort;
-  end;
-  datas[iData].wRequest:=wRequest;
+  datas[iData].hRequest:=hRequest;
   datas[iData].dt:=now();
-  datas[iData].ObjectName:=ObjectName;
+  datas[iData].url:=url;
   datas[iData].verb:=verb;
   iData:=iData+1;
   if(iData>=MAX_RECORD)then iData:=0;
   result:=iData;
 end;
 //添加qHeader,rHeader,len;
-function addHeader(wRequest:DWORD;qHeader:string;rHeader:string;len:string):integer;
+function addHeader(hRequest:DWORD;qHeader:string;rHeader:string;len:string):integer;
 begin
   result:=-1;
-  if(wRequest<>datas[iData-1].wRequest)then exit;
-  datas[iData-1].qHeader:=qHeader;
-  datas[iData-1].rHeader:=rHeader;
-  datas[iData-1].len:=len;
+  if(hRequest<>datas[iData-1].hRequest)then exit;
+  datas[iData].qHeader:=qHeader;
+  datas[iData].rHeader:=rHeader;
+  datas[iData].len:=len;
   result:=iData-1;
 end;
 //添加addData;
-function addData(wRequest:DWORD;dType:DWORD;p:pointer;len:DWORD):integer;
+function addData(hRequest:DWORD;dType:DWORD;p:pointer;len:DWORD):integer;
 var
   filename:string;
 begin
   //result:=-1;
-  //if(wRequest<>datas[iData].wRequest)then exit;
+  //if(hRequest<>datas[iData].hRequest)then exit;
   if(dType=DATA_TYPE_REQUEST)then begin
     filename:=uFuncs.getFilename(uConfig.workdir,'request','.txt');
     datas[iData-1].qData:=filename;

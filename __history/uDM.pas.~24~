@@ -3,7 +3,7 @@ unit uDM;
 interface
 
 uses
-  System.SysUtils, System.Classes, Data.DB, Data.Win.ADODB,uConfig,uLog,uFuncs;
+  System.SysUtils, System.Classes, Data.DB, Data.Win.ADODB,uConfig,uLog;
 
 type
   Tdm = class(TDataModule)
@@ -23,8 +23,7 @@ type
     function InsertPageInfo(protocol,domain,port,url:string):string;
     function InsertPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string):string;
     //插入主页信息详细信息：
-    function addPageDetail(pageID,ServerName,ServerPort,ObjectName,verb,len,qHeader,rHeader,qData,rData:string;dtGet:tdatetime):string;
-    function addPageInfo(protocol,domain,port,url:string):string;
+    function addPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string):string;
   end;
 
 var
@@ -35,23 +34,8 @@ implementation
 {%CLASSGROUP 'Vcl.Controls.TControl'}
 
 {$R *.dfm}
-//添加主页信息,,返回主页信息ID：
-function TDM.addPageInfo(protocol,domain,port,url:string):string;
-begin
-  if(dm.tPage.Active=false)then begin
-    dm.tPage.Open;
-    tPageDetail.Open;
-  end;
-  dm.tPage.Append;
-  tPage.fieldbyname('page_protocol').AsString:=protocol;
-  tPage.fieldbyname('page_domain').AsString:=domain;      //strtodatetime(dt)
-  tPage.fieldbyname('page_port').AsString:=port;
-  tPage.fieldbyname('page_url').AsString:=url;
-  tPage.Post;
-  result:=tPage.fieldbyname('ID').AsString;
-end;
 //插入主页信息详细信息：
-function TDM.addPageDetail(pageID,ServerName,ServerPort,ObjectName,verb,len,qHeader,rHeader,qData,rData:string;dtGet:tdatetime):string;
+function TDM.addPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string):string;
 begin
   if(dm.tPageDetail.Active=false)then begin
     dm.tPage.Open;
@@ -59,10 +43,8 @@ begin
   end;
   dm.tPageDetail.Append;
   tPageDetail.fieldbyname('page_ID').AsInteger:=strtoint(pageID);
-  tPageDetail.fieldbyname('get_time').AsDateTime:=dtGet;      //
-  tPageDetail.fieldbyname('server_name').AsString:=ServerName;
-  tPageDetail.fieldbyname('server_port').AsString:=ServerPort;
-  tPageDetail.fieldbyname('object_name').AsString:=ObjectName;
+  tPageDetail.fieldbyname('get_time').AsDateTime:=now;      //strtodatetime(dt)
+  tPageDetail.fieldbyname('target_url').AsString:=url;
   tPageDetail.fieldbyname('op_verb').AsString:=verb;
   tPageDetail.fieldbyname('data_len').AsString:=len;
   tPageDetail.fieldbyname('request_header').AsString:=qHeader;

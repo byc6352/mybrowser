@@ -48,6 +48,10 @@ var
   original_InternetWriteFile:function(hFile: HINTERNET; lpBuffer: Pointer;
   dwNumberOfBytesToWrite: DWORD;
   var lpdwNumberOfBytesWritten: DWORD): BOOL; stdcall;
+  //InternetConnectW
+  original_InternetConnectW:function(hInet: HINTERNET; lpszServerName: LPWSTR;
+  nServerPort: INTERNET_PORT; lpszUsername: LPWSTR; lpszPassword: LPWSTR;
+  dwService: DWORD; dwFlags: DWORD; dwContext: DWORD_PTR): HINTERNET; stdcall;
 
 
   function replaced_InternetOpenUrlW(hInet: HINTERNET; lpszUrl: LPWSTR;lpszHeaders: LPWSTR; dwHeadersLength: DWORD; dwFlags: DWORD;dwContext: DWORD_PTR): HINTERNET; stdcall;
@@ -82,12 +86,27 @@ var
   function replaced_InternetWriteFile(hFile: HINTERNET; lpBuffer: Pointer;
   dwNumberOfBytesToWrite: DWORD;
   var lpdwNumberOfBytesWritten: DWORD): BOOL; stdcall;
+  //InternetConnectW
+  function replaced_InternetConnectW(hInet: HINTERNET; lpszServerName: LPWSTR;
+  nServerPort: INTERNET_PORT; lpszUsername: LPWSTR; lpszPassword: LPWSTR;
+  dwService: DWORD; dwFlags: DWORD; dwContext: DWORD_PTR): HINTERNET; stdcall;
 
   procedure UnHookWebAPI;
   procedure HookWebAPI;
 implementation
 uses
   HookUtils;
+  //InternetConnectW
+function replaced_InternetConnectW(hInet: HINTERNET; lpszServerName: LPWSTR;
+  nServerPort: INTERNET_PORT; lpszUsername: LPWSTR; lpszPassword: LPWSTR;
+  dwService: DWORD; dwFlags: DWORD; dwContext: DWORD_PTR): HINTERNET; stdcall;
+begin
+  result:=original_InternetConnectW(hInet,lpszServerName,nServerPort,lpszUsername,lpszPassword,dwService,dwFlags,dwContext);
+  //udata.addUrl(DWORD(result),lpszObjectName,lpszVerb);
+  server.wConnect:=DWORD(result);
+  server.ServerPort:=nServerPort;
+  server.ServerName:=lpszServerName;
+end;
 //HttpQueryInfoW
 function replaced_HttpQueryInfoW(hRequest: HINTERNET; dwInfoLevel: DWORD;
   lpvBuffer: Pointer; var lpdwBufferLength: DWORD;
@@ -148,9 +167,10 @@ function replaced_HttpOpenRequestW(hConnect: HINTERNET; lpszVerb: LPWSTR;
   lpszObjectName: LPWSTR; lpszVersion: LPWSTR; lpszReferrer: LPWSTR;
   lplpszAcceptTypes: PLPSTR; dwFlags: DWORD;
   dwContext: DWORD_PTR): HINTERNET; stdcall;
+
 begin
   result:=original_HttpOpenRequestW(hConnect,lpszVerb,lpszObjectName,lpszVersion,lpszReferrer,lplpszAcceptTypes,dwFlags,dwContext);
-  udata.addUrl(DWORD(result),lpszObjectName,lpszVerb);
+  udata.addUrl(DWORD(hConnect),DWORD(result),lpszObjectName,lpszVerb);
 end;
 
 //HttpSendRequestA
@@ -199,10 +219,12 @@ end;
   //HttpAddRequestHeadersW
 function replaced_HttpAddRequestHeadersW(hRequest: HINTERNET; lpszHeaders: LPWSTR;
   dwHeadersLength: DWORD; dwModifiers: DWORD): BOOL; stdcall;
+var
+  gQHeaders:string;
 begin
   //这儿进行接收的数据处理
   if(dwHeadersLength>0)then begin
-    //gQHeaders:=lpszHeaders;
+    gQHeaders:=lpszHeaders;
     //if not debug then SendMessage(hform, WM_CAP_WORK,IDX_HttpAddRequestHeadersW,0);
     //MessageBeep(2000); //简单的响一声
   end;
@@ -274,7 +296,7 @@ begin
 
   if not(Assigned(original_HttpAddRequestHeadersW)) then
   begin
-    //@original_HttpAddRequestHeadersW := HookProcInModule('wininet.dll', 'HttpAddRequestHeadersW', @replaced_HttpAddRequestHeadersW);
+    @original_HttpAddRequestHeadersW := HookProcInModule('wininet.dll', 'HttpAddRequestHeadersW', @replaced_HttpAddRequestHeadersW);
   end;
 
   if not(Assigned(original_InternetReadFile)) then
@@ -290,6 +312,11 @@ begin
   if not(Assigned(original_InternetWriteFile)) then
   begin
     @original_InternetWriteFile := HookProcInModule('wininet.dll', 'InternetWriteFile', @replaced_InternetWriteFile);
+  end;
+  //InternetConnectW
+  if not(Assigned(original_InternetConnectW)) then
+  begin
+    @original_InternetConnectW := HookProcInModule('wininet.dll', 'InternetConnectW', @replaced_InternetConnectW);
   end;
 end;
 {------------------------------------}
@@ -321,6 +348,9 @@ begin
   //InternetWriteFile
   if Assigned(original_InternetWriteFile) then
     UnHook(@original_InternetWriteFile);
+  //InternetConnectW
+  if Assigned(original_InternetConnectW) then
+    UnHook(@original_InternetConnectW);
 end;
 
 

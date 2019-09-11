@@ -11,19 +11,7 @@ uses
   function gets(p:pointer;dwSize:DWORD):string;
   function getDataTimeString():string;overload;
   function getDataTimeString(dt:tdatetime):string;overload;
-  function my_strtodatetime(str_datetime:string):tdatetime;
 implementation
-function my_strtodatetime(str_datetime:string):tdatetime;
-var
-  fmt: TFormatSettings;
-  str_sep,sys_sep,tmp_str:string;
-begin
-  GetLocaleFormatSettings(GetThreadLocale, fmt);
-  str_sep:=midstr(str_datetime,5,1);
-  sys_sep:=fmt.DateSeparator;
-  tmp_str:=replacestr(str_datetime,str_sep,sys_sep);
-  result:=strtodatetime(tmp_str);
-end;
 function getDataTimeString(dt:tdatetime):string;
 var
   s:string;

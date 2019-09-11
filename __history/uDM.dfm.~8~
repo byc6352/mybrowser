@@ -9,6 +9,7 @@ object dm: Tdm
     Top = 16
   end
   object conn: TADOConnection
+    Connected = True
     ConnectionString = 
       'Provider=Microsoft.Jet.OLEDB.4.0;Password="";Data Source=D:\work' +
       's\delphi\mybrowser\Win32\Debug\web\web.mdb;Persist Security Info' +
@@ -26,6 +27,7 @@ object dm: Tdm
     Top = 16
   end
   object tPage: TADOTable
+    Active = True
     Connection = conn
     CursorType = ctStatic
     TableName = 'web_page'
@@ -33,6 +35,7 @@ object dm: Tdm
     Top = 72
   end
   object tPageDetail: TADOTable
+    Active = True
     Connection = conn
     CursorType = ctStatic
     IndexFieldNames = 'page_ID'
