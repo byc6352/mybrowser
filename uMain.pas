@@ -6,12 +6,12 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
   Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi,uData,
-  Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids;
+  Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,
+  EmbeddedWB;
 
 type
   TfMain = class(TForm)
     Panel1: TPanel;
-    edturl: TEdit;
     Bar1: TStatusBar;
     Page1: TPageControl;
     tsData: TTabSheet;
@@ -25,7 +25,7 @@ type
     Page2: TPageControl;
     tsweb: TTabSheet;
     tscode: TTabSheet;
-    Web1: TWebBrowser;
+    Web1: TEmbeddedWB;
     memCode: TMemo;
     Web2: TWebBrowser;
     btnClear: TButton;
@@ -43,11 +43,9 @@ type
     DBGrid1: TDBGrid;
     DBGrid2: TDBGrid;
     Splitter3: TSplitter;
+    cmbUrl: TComboBox;
     procedure FormShow(Sender: TObject);
-    procedure Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
-      const URL: OleVariant);
-    procedure Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
-      const URL: OleVariant);
+
     procedure listDataSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure Web2BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
@@ -55,23 +53,29 @@ type
       var Cancel: WordBool);
     procedure Web1NewWindow2(ASender: TObject; var ppDisp: IDispatch;
       var Cancel: WordBool);
-    procedure Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
-      const URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
-      var Cancel: WordBool);
+
     procedure btnClearClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure nOpenDirClick(Sender: TObject);
     procedure btnBrushClick(Sender: TObject);
-    procedure edturlEnter(Sender: TObject);
     procedure btnBackClick(Sender: TObject);
     procedure btnForwardClick(Sender: TObject);
     procedure nOpenRequestDataClick(Sender: TObject);
     procedure nOpenResponseDataClick(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure DBGrid2CellClick(Column: TColumn);
+    procedure FormCreate(Sender: TObject);
+    procedure cmbUrlChange(Sender: TObject);
+    procedure Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
+      var URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
+      var Cancel: WordBool);
+    procedure Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
+      var URL: OleVariant);
+    procedure Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
+      var URL: OleVariant);
   private
     { Private declarations }
-    bProcessData:boolean;
+    bProcessData,bDocumentComplete:boolean;
     mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
     procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
     procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
@@ -86,9 +90,13 @@ type
 var
   fMain: TfMain;
   function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
+
 implementation
 
 {$R *.dfm}
+uses
+  uYinyuetai;
+
 function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
 var
   protocol:string;
@@ -148,6 +156,7 @@ begin
       url:=MergeUrl(Servername,ObjectName,Serverport);
       uDown.addUrl(url);
       dm.addPageDetail(pageID,servername,inttostr(ServerPort),ObjectName,verb,len,qHeader,rHeader,qData,rData,dtGet);
+      if(findResource(ObjectName))then memoinfo.Lines.Add(url);
     end;
     //application.ProcessMessages;
   end;
@@ -158,11 +167,13 @@ const
   mp4='.mp4';
   swf='.swf';
   fla='.fla';
+  mvi='get-h-mv-info';
 begin
   result:=true;
   if pos(mp4,url)>0 then exit;
   if pos(swf,url)>0 then exit;
   if pos(fla,url)>0 then exit;
+  if pos(mvi,url)>0 then exit;
   result:=false;
 end;
 procedure TfMain.getResource();
@@ -202,14 +213,12 @@ begin
   j:=msg.WParam;
   if j=1 then
     bar1.Panels[1].Text:='下载完毕！'
-  else
-    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']';
+  else if j=0 then
+    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']'
+  else if j=2 then begin
+    memoInfo.lines.add(uYinyuetai.videoInfo);
+  end;
 end;
-procedure TfMain.edturlEnter(Sender: TObject);
-begin
-  //btnBrush.click();
-end;
-
 procedure TfMain.httpMessage(var msg:TMessage);
 var
   len,flag:integer;
@@ -286,7 +295,8 @@ end;
 procedure TfMain.btnBrushClick(Sender: TObject);
 begin
   page2.ActivePageIndex:=0;
-  web1.Navigate(trim(edtUrl.Text));
+  //web1.Navigate(trim(cmburl.Items[cmburl.ItemIndex]));
+  web1.Navigate(trim(cmburl.Text));
   btnBack.Enabled:=true;
   btnForward.Enabled:=true;
 end;
@@ -306,6 +316,11 @@ procedure TfMain.btnForwardClick(Sender: TObject);
 begin
   page2.ActivePageIndex:=0;
   web1.GoForward;
+end;
+
+procedure TfMain.cmbUrlChange(Sender: TObject);
+begin
+  web1.Navigate(trim(cmburl.Items[cmburl.ItemIndex]));
 end;
 
 procedure TfMain.DBGrid2CellClick(Column: TColumn);
@@ -340,17 +355,29 @@ begin
   uDown.stop;
 end;
 
+procedure TfMain.FormCreate(Sender: TObject);
+begin
+
+  Set8087CW(Longword($133f));
+  IEEmulator(11001);
+  //IEEmulator();
+end;
+
 procedure TfMain.FormShow(Sender: TObject);
 begin
   //uhookweb.hForm:=fmain.Handle; //
+  cmburl.ItemIndex:=0;
   timer1.Enabled:=false;
   uDown.start(uConfig.workdir,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
+
 end;
 
+
+
 procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
-  const URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
+  var URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
   var Cancel: WordBool);
 begin
   uDown.pause();
@@ -360,11 +387,12 @@ begin
 end;
 
 procedure TfMain.Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
-  const URL: OleVariant);
+  var URL: OleVariant);
 var
   doc:IHTMLDocument2;
 begin
   if(Web1.ReadyState<>READYSTATE_COMPLETE)then exit;
+  if(uHookweb.state=STAT_IDLE)then exit;
   //if not assigned(web1.Document) then exit;
   //if(web1.Busy)then exit;
 
@@ -378,7 +406,7 @@ begin
   mProtocol:=doc.protocol;
   if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https' else mProtocol:='http';
 
-  edturl.Text:=mpage;
+  cmburl.Text:=mpage;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
   uHookweb.state:=STAT_IDLE;
   bar1.Panels[0].Text:='页面加载完毕！';
@@ -390,14 +418,13 @@ begin
     mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
     timer1.Enabled:=true;
   end;
-  //getResource();
-
+  yinyuetai(mPage);
 end;
 
 procedure TfMain.Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
-  const URL: OleVariant);
+  var URL: OleVariant);
 begin
-  web1.Silent:=true;
+ web1.Silent:=true;
 end;
 
 procedure TfMain.Web1NewWindow2(ASender: TObject; var ppDisp: IDispatch;

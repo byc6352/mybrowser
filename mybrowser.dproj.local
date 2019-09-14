@@ -20,8 +20,10 @@
     <Transaction>2019/09/06 19:21:20.000.669,=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
     <Transaction>2019/09/06 19:21:34.000.057,D:\works\delphi\mybrowser\uDatabase.pas=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
     <Transaction>2019/09/07 07:55:02.000.434,=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
-    <Transaction>2019/09/07 07:55:21.000.806,D:\works\delphi\mybrowser\uDM.dfm=D:\works\delphi\mybrowser\Unit1.dfm</Transaction>
     <Transaction>2019/09/07 07:55:21.000.806,D:\works\delphi\mybrowser\uDM.pas=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/07 07:55:21.000.806,D:\works\delphi\mybrowser\uDM.dfm=D:\works\delphi\mybrowser\Unit1.dfm</Transaction>
     <Transaction>2019/09/07 07:58:18.000.939,=D:\works\delphi\mybrowser\ModelSupport_mybrowser\default.txaPackage</Transaction>
+    <Transaction>2019/09/14 17:14:51.241,=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
+    <Transaction>2019/09/14 17:15:25.434,D:\works\delphi\mybrowser\uYinyuetai.pas=D:\works\delphi\mybrowser\Unit1.pas</Transaction>
   </Transactions>
 </BorlandProject>

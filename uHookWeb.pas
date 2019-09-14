@@ -134,7 +134,7 @@ begin
 
   result:=original_HttpQueryInfoW(hRequest,dwInfoLevel,lpvBuffer,lpdwBufferLength,lpdwReserved);
   //这儿进行接收的数据处理
-  if(dwInfoLevel=HTTP_QUERY_RAW_HEADERS_CRLF)then begin
+  if(dwInfoLevel=HTTP_QUERY_RAW_HEADERS_CRLF)and (result=true)then begin
     rHeader:=pchar(lpvBuffer);
     udata.addHeader(DWORD(hRequest),qHeader,rHeader,datalen);
     //postMessage(hform, WM_CAP_WORK,IDX_HttpOpenRequestW,0);

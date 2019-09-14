@@ -12,6 +12,7 @@ object fMain: TfMain
   Font.Style = []
   OldCreateOrder = False
   OnClose = FormClose
+  OnCreate = FormCreate
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -31,22 +32,13 @@ object fMain: TfMain
     Height = 33
     Align = alTop
     TabOrder = 0
-    object edturl: TEdit
-      Left = 75
-      Top = 6
-      Width = 644
-      Height = 21
-      TabOrder = 0
-      Text = 'http://localhost:8080/test.htm'
-      OnEnter = edturlEnter
-    end
     object btnClear: TButton
       Left = 728
       Top = 5
       Width = 75
       Height = 25
       Caption = #28165#31354
-      TabOrder = 1
+      TabOrder = 0
       OnClick = btnClearClick
     end
     object chkDownAll: TCheckBox
@@ -57,7 +49,7 @@ object fMain: TfMain
       Caption = #19979#36733#25152#26377#32593#39029#36164#28304
       Checked = True
       State = cbChecked
-      TabOrder = 2
+      TabOrder = 1
     end
     object btnBack: TBitBtn
       Left = 2
@@ -66,7 +58,7 @@ object fMain: TfMain
       Height = 25
       Caption = #22238
       Enabled = False
-      TabOrder = 3
+      TabOrder = 2
       OnClick = btnBackClick
     end
     object btnForward: TBitBtn
@@ -76,7 +68,7 @@ object fMain: TfMain
       Height = 25
       Caption = #21069
       Enabled = False
-      TabOrder = 4
+      TabOrder = 3
       OnClick = btnForwardClick
     end
     object btnBrush: TBitBtn
@@ -85,8 +77,21 @@ object fMain: TfMain
       Width = 24
       Height = 25
       Caption = #21047
-      TabOrder = 5
+      TabOrder = 4
       OnClick = btnBrushClick
+    end
+    object cmbUrl: TComboBox
+      Left = 79
+      Top = 8
+      Width = 643
+      Height = 21
+      TabOrder = 5
+      OnChange = cmbUrlChange
+      Items.Strings = (
+        'http://mybrowse.osfipin.com'
+        'http://v.yinyuetai.com/video/3395476'
+        'http://www.yinyuetai.com/'
+        'http://v.yinyuetai.com/video/3295642')
     end
   end
   object Bar1: TStatusBar
@@ -107,7 +112,7 @@ object fMain: TfMain
     Top = 33
     Width = 289
     Height = 783
-    ActivePage = tsData
+    ActivePage = tsInfo
     Align = alRight
     TabOrder = 2
     object tsData: TTabSheet
@@ -207,12 +212,12 @@ object fMain: TfMain
       Top = 1
       Width = 786
       Height = 628
-      ActivePage = tsRecord
+      ActivePage = tsweb
       Align = alClient
       TabOrder = 1
       object tsweb: TTabSheet
         Caption = #27983#35272#22120
-        object Web1: TWebBrowser
+        object Web1: TEmbeddedWB
           Left = 0
           Top = 0
           Width = 778
@@ -223,6 +228,12 @@ object fMain: TfMain
           OnNewWindow2 = Web1NewWindow2
           OnNavigateComplete2 = Web1NavigateComplete2
           OnDocumentComplete = Web1DocumentComplete
+          DisableCtrlShortcuts = 'N'
+          UserInterfaceOptions = [EnablesFormsAutoComplete, EnableThemes]
+          About = ' EmbeddedWB http://bsalsa.com/'
+          PrintOptions.HTMLHeader.Strings = (
+            '<HTML></HTML>')
+          PrintOptions.Orientation = poPortrait
           ExplicitWidth = 786
           ExplicitHeight = 625
           ControlData = {

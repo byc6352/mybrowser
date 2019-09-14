@@ -15,7 +15,8 @@ var
   mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
 
 function DownloadToFile(Source, Dest: string): Boolean; //uses urlmon;
-procedure downloadfile(url:string); //下载指定链接的文件
+//procedure downloadfile(url:string);overload; //下载指定链接的文件
+function downloadfile(url:string):string;
 function url2file(url:string):string;//链接转换为本地文件路径
 function getSite(url:string):string;//获取主站地址；
 procedure downloadFilesThread();//下载子线程；
@@ -102,19 +103,24 @@ begin
   end;
 end;
 //下载指定链接的文件
-procedure downloadfile(url:string);
+function downloadfile(url:string):string;
 var
   localpath,remotepath:string;
 begin
   remotepath:=url;
   if(rightstr(remotepath,1)='/')then remotepath:=remotepath+'index.htm';
   localpath:=url2file(remotepath);
+  result:=localpath;
   if(fileexists(localpath))then exit;
-  if(DownloadToFile(remotepath,localpath))then
-    Log('suc:'+remotepath+#13#10+localpath)
-  else
+  if(DownloadToFile(remotepath,localpath))then begin
+    Log('suc:'+remotepath+#13#10+localpath);
+    result:=localpath;
+  end else begin
     Log('fal:'+remotepath+#13#10+localpath);
+    result:='';
+  end;
 end;
+
 //链接转换为本地文件路径
 function url2file(url:string):string;
 var
@@ -125,6 +131,7 @@ begin
   fullDir:=mworkdir;  //程序工作目录；
   if(rightstr(s,1)='/')then s:=s+'index.htm';
   p:=pos('/',s);
+  if(p>0)then
   dir:=leftstr(s,p-1);
   if(dir='http:')then s:=rightstr(s,length(s)-7);  //去除http头部
   if(dir='https:')then s:=rightstr(s,length(s)-8);  //去除https头部
@@ -139,15 +146,15 @@ begin
     p:=pos('/',s);
   end;
   p:=pos('?',s);  //排除链接里面?后面的内容；
-  //if(p>0)then s:=replacestr(s,'?','-');
-  if(p>0)then s:=leftstr(s,p-1);
+  if(p>0)then s:=replacestr(s,'?','$');
+  //if(p>0)then s:=leftstr(s,p-1);
   //p:=pos('&',s);  //排除链接里面?后面的内容；
   //if(p>0)then s:=replacestr(s,'&','-');
   //p:=pos('=',s);  //排除链接里面?后面的内容；
   //if(p>0)then s:=replacestr(s,'=','-');
   //if(p>0)then s:=leftstr(s,p-1);
-  p:=pos('#',s);  //排除链接里面?后面的内容；
-  if(p>0)then s:=leftstr(s,p-1);
+  //p:=pos('#',s);  //排除链接里面?后面的内容；
+  //if(p>0)then s:=leftstr(s,p-1);
   result:=fullDir+'\'+s;
 end;
 //获取主站地址；
@@ -193,4 +200,22 @@ finalization
     mDowns.Clear;
     mDowns.Free;
   end;
+
+{
+ //下载指定链接的文件
+procedure downloadfile(url:string);
+var
+  localpath,remotepath:string;
+begin
+  remotepath:=url;
+  if(rightstr(remotepath,1)='/')then remotepath:=remotepath+'index.htm';
+  localpath:=url2file(remotepath);
+  if(fileexists(localpath))then exit;
+  if(DownloadToFile(remotepath,localpath))then
+    Log('suc:'+remotepath+#13#10+localpath)
+  else
+    Log('fal:'+remotepath+#13#10+localpath);
+end;
+
+}
 end.
