@@ -9,45 +9,13 @@ uses
   function ReversePos(SubStr, S: String): Integer;
   function saveTofile2(filename:string;p:pointer;dwSize:DWORD):boolean;
   function gets(p:pointer;dwSize:DWORD):string;
-  //function getDateTimeString():string;overload;
-  //function getDateTimeString(dt:tdatetime):string;overload;
-  function getDateTimeString(dt:tdatetime;formatType:integer):string;
+  function getDataTimeString():string;overload;
+  function getDataTimeString(dt:tdatetime):string;overload;
   function my_strtodatetime(str_datetime:string):tdatetime;
   procedure IEEmulator(VerCode: Integer);overload;
   function IEEmulator(): Boolean;overload;
   function IsWin64: Boolean;
-  function IsValidFileName(FileName: string): Boolean;
-  function forceValidFileName(var FileName: string): Boolean;
 implementation
-function forceValidFileName(var FileName: string): Boolean;
-begin
-  result:=false;
-  if(pos('<',FileName)>0)then FileName:=replacestr(FileName,'<','-');
-  if(pos('>',FileName)>0)then FileName:=replacestr(FileName,'>','-');
-  if(pos('?',FileName)>0)then FileName:=replacestr(FileName,'?','-');
-  if(pos('/',FileName)>0)then FileName:=replacestr(FileName,'/','-');
-  if(pos('\',FileName)>0)then FileName:=replacestr(FileName,'\','-');
-  if(pos(':',FileName)>0)then FileName:=replacestr(FileName,':','-');
-  if(pos('*',FileName)>0)then FileName:=replacestr(FileName,'*','-');
-  if(pos('|',FileName)>0)then FileName:=replacestr(FileName,'|','-');
-  if(pos('"',FileName)>0)then FileName:=replacestr(FileName,'"','-');
-  result:=true;
-end;
-function IsValidFileName(FileName: string): Boolean;
-{
-  判断FileName是否是合法的文件名，是，返回True,否则，返回False;
-}
-var
-  i: integer;
-begin
-  result := True;
-  for i := 1 to Length(FileName) do
-    if FileName[i] in ['<', '>', '?', '/', '\', ':', '*', '|', '"'] then
-    begin
-      result := False;
-      Exit;
-    end;
-end;
 {
 10001 (0x2711)	Internet Explorer 10。网页以IE 10的标准模式展现，页面!DOCTYPE无效
 10000 (0x02710)	Internet Explorer 10。在IE 10标准模式中按照网页上!DOCTYPE指令来显示网页。Internet Explorer 10 默认值。
@@ -171,26 +139,18 @@ begin
   tmp_str:=replacestr(str_datetime,str_sep,sys_sep);
   result:=strtodatetime(tmp_str);
 end;
-function getDateTimeString(dt:tdatetime;formatType:integer):string;
-const
-  TIME_STR='yyyy-mm-dd hh:nn:ss';
-  FILE_STR='yyyymmddhhnnsszzz';
-  TIME_FORMAT=0;
-  FILE_FORMAT=1;
+function getDataTimeString(dt:tdatetime):string;
 var
   s:string;
 begin
-  s:='';
-try
-  if formatType=TIME_FORMAT then
-    s:=FormatDateTime(TIME_STR,dt);
-  if formatType=FILE_FORMAT then
-    s:=FormatDateTime(FILE_STR,dt);
-finally
-  result:=s;
+  result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',dt);
 end;
+function getDataTimeString():string;
+var
+  s:string;
+begin
+  result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',now());
 end;
-
 function gets(p:pointer;dwSize:DWORD):string;
 var
   ms:TMemoryStream;
@@ -242,8 +202,7 @@ var
 begin
   randomize();
   i:=random(10);
-  //result:=workdir+'\'+cap+FormatDateTime('yyyymmddhhnnsszzz',now())+inttostr(i)+ext;
-  result:=workdir+'\'+cap+getDatetimeString(now(),1)+inttostr(i)+ext;
+  result:=workdir+'\'+cap+FormatDateTime('yyyymmddhhnnsszzz',now())+inttostr(i)+ext;
 end;
 function ReversePos(SubStr, S: String): Integer;
 var
@@ -259,36 +218,7 @@ var
 begin
   randomize();
   i:=random(10);
-  result:=workdir+'\'+getDatetimeString(now(),1)+inttostr(i)+'.txt';
+  result:=workdir+'\'+FormatDateTime('yyyymmddhhnnsszzz',now())+inttostr(i)+'.txt';
 end;
 
-
-{
-
-
- function getDataTimeString(dt:tdatetime):string;
-var
-  s:string;
-begin
-try
-  result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',dt);
-finally
-
-end;
-end;
-function getDateTimeString():string;
-var
-  s:string;
-begin
-  result:='';
-try
-  result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',now());
-finally
-
-end;
-end;
-
-
-
-}
 end.

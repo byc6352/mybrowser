@@ -9,13 +9,45 @@ uses
   function ReversePos(SubStr, S: String): Integer;
   function saveTofile2(filename:string;p:pointer;dwSize:DWORD):boolean;
   function gets(p:pointer;dwSize:DWORD):string;
-  function getDataTimeString():string;overload;
-  function getDataTimeString(dt:tdatetime):string;overload;
+  function getDateTimeString():string;overload;
+  function getDateTimeString(dt:tdatetime):string;overload;
+  function getDateTimeString(dt:tdatetime;formatType:integer):string;overload;
   function my_strtodatetime(str_datetime:string):tdatetime;
-  procedure IEEmulator(VerCode: Integer);
-  function WriteAppNameToReg: Boolean;
+  procedure IEEmulator(VerCode: Integer);overload;
+  function IEEmulator(): Boolean;overload;
   function IsWin64: Boolean;
+  function IsValidFileName(FileName: string): Boolean;
+  function forceValidFileName(var FileName: string): Boolean;
 implementation
+function forceValidFileName(var FileName: string): Boolean;
+begin
+  result:=false;
+  if(pos('<',FileName)>0)then FileName:=replacestr(FileName,'<','-');
+  if(pos('>',FileName)>0)then FileName:=replacestr(FileName,'>','-');
+  if(pos('?',FileName)>0)then FileName:=replacestr(FileName,'?','-');
+  if(pos('/',FileName)>0)then FileName:=replacestr(FileName,'/','-');
+  if(pos('\',FileName)>0)then FileName:=replacestr(FileName,'\','-');
+  if(pos(':',FileName)>0)then FileName:=replacestr(FileName,':','-');
+  if(pos('*',FileName)>0)then FileName:=replacestr(FileName,'*','-');
+  if(pos('|',FileName)>0)then FileName:=replacestr(FileName,'|','-');
+  if(pos('"',FileName)>0)then FileName:=replacestr(FileName,'"','-');
+  result:=true;
+end;
+function IsValidFileName(FileName: string): Boolean;
+{
+  判断FileName是否是合法的文件名，是，返回True,否则，返回False;
+}
+var
+  i: integer;
+begin
+  result := True;
+  for i := 1 to Length(FileName) do
+    if FileName[i] in ['<', '>', '?', '/', '\', ':', '*', '|', '"'] then
+    begin
+      result := False;
+      Exit;
+    end;
+end;
 {
 10001 (0x2711)	Internet Explorer 10。网页以IE 10的标准模式展现，页面!DOCTYPE无效
 10000 (0x02710)	Internet Explorer 10。在IE 10标准模式中按照网页上!DOCTYPE指令来显示网页。Internet Explorer 10 默认值。
@@ -40,19 +72,22 @@ Important  In Internet Explorer 10, Webpages containing standards-based !DOCTYPE
 7000 (0x1B58)	Webpages containing standards-based !DOCTYPE directives are displayed in IE7 Standards mode. Default value for applications hosting the WebBrowser Control.
 }
 procedure IEEmulator(VerCode: Integer);
+const
+  IE_SET_PATH_32='SOFTWARE\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_BROWSER_EMULATION';
+  IE_SET_PATH_64='SOFTWARE\Wow6432Node\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_BROWSER_EMULATION';
 var
   RegObj: TRegistry;
+  sPath:string;
 begin
   RegObj := TRegistry.Create;
   try
-    RegObj.RootKey := HKEY_CURRENT_USER;
+    //RegObj.RootKey := HKEY_CURRENT_USER;
+    RegObj.RootKey := HKEY_LOCAL_MACHINE;
     RegObj.Access := KEY_ALL_ACCESS;
-    if not RegObj.OpenKey('\SOFTWARE\Microsoft\Internet ' +
-        'Explorer\MAIN\FeatureControl\FEATURE_BROWSER_EMULATION', False) then exit;
+    if isWin64 then sPath := IE_SET_PATH_64 else sPath:=IE_SET_PATH_32;
+    if not RegObj.OpenKey(sPath, False) then exit;
     try
-      RegObj.WriteInteger(ExtractFileName(ParamStr(0)), VerCode
-        {10000 compatibility with IE10}); // for other versions read msdn
-
+      RegObj.WriteInteger(ExtractFileName(ParamStr(0)), VerCode);
     finally
       RegObj.CloseKey;
     end;
@@ -99,7 +134,10 @@ begin
   else Result := False;
 end;
 {--}
-function WriteAppNameToReg: Boolean;
+function IEEmulator(): Boolean;
+const
+  IE_SET_PATH_32='SOFTWARE\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_BROWSER_EMULATION';
+  IE_SET_PATH_64='SOFTWARE\Wow6432Node\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_BROWSER_EMULATION';
 var
   reg :TRegistry;
   sPath,sAppName:String;
@@ -108,13 +146,13 @@ begin
   reg := TRegistry.Create;
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;
-    sPath := 'SOFTWARE\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_BROWSER_EMULATION';
+    sPath := IE_SET_PATH_32;
     if isWin64 then
-      sPath := 'SOFTWARE\Wow6432Node\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_BROWSER_EMULATION';
+      sPath :=IE_SET_PATH_64;
     if reg.OpenKey(sPath,True) then
     begin
       sAppName := ExtractFileName(ParamStr(0));
-     if not reg.ValueExists(sAppName) then
+     //if not reg.ValueExists(sAppName) then
         reg.WriteInteger(sAppName,0);
     end;
     reg.CloseKey;
@@ -133,17 +171,45 @@ begin
   tmp_str:=replacestr(str_datetime,str_sep,sys_sep);
   result:=strtodatetime(tmp_str);
 end;
+function getDateTimeString(dt:tdatetime;formatType:integer):string;
+const
+  TIME_STR='yyyy-mm-dd hh:nn:ss';
+  FILE_STR='yyyymmddhhnnsszzz';
+  TIME_FORMAT=0;
+  FILE_FORMAT=1;
+var
+  s:string;
+begin
+  s:='';
+try
+  if formatType=TIME_FORMAT then
+    s:=FormatDateTime(TIME_STR,dt);
+  if formatType=FILE_FORMAT then
+    s:=FormatDateTime(FILE_STR,dt);
+finally
+  result:=s;
+end;
+end;
 function getDataTimeString(dt:tdatetime):string;
 var
   s:string;
 begin
+try
   result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',dt);
+finally
+
 end;
-function getDataTimeString():string;
+end;
+function getDateTimeString():string;
 var
   s:string;
 begin
+  result:='';
+try
   result:=FormatDateTime('yyyy-mm-dd hh:nn:ss',now());
+finally
+
+end;
 end;
 function gets(p:pointer;dwSize:DWORD):string;
 var
@@ -196,7 +262,8 @@ var
 begin
   randomize();
   i:=random(10);
-  result:=workdir+'\'+cap+FormatDateTime('yyyymmddhhnnsszzz',now())+inttostr(i)+ext;
+  //result:=workdir+'\'+cap+FormatDateTime('yyyymmddhhnnsszzz',now())+inttostr(i)+ext;
+  result:=workdir+'\'+cap+getDatetimeString(now(),1)+inttostr(i)+ext;
 end;
 function ReversePos(SubStr, S: String): Integer;
 var
@@ -212,7 +279,7 @@ var
 begin
   randomize();
   i:=random(10);
-  result:=workdir+'\'+FormatDateTime('yyyymmddhhnnsszzz',now())+inttostr(i)+'.txt';
+  result:=workdir+'\'+getDatetimeString(now(),1)+inttostr(i)+'.txt';
 end;
 
 end.

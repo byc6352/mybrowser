@@ -34,7 +34,7 @@ object fMain: TfMain
     TabOrder = 0
     object btnClear: TButton
       Left = 728
-      Top = 5
+      Top = 3
       Width = 75
       Height = 25
       Caption = #28165#31354
@@ -91,7 +91,17 @@ object fMain: TfMain
         'http://mybrowse.osfipin.com'
         'http://v.yinyuetai.com/video/3395476'
         'http://www.yinyuetai.com/'
-        'http://v.yinyuetai.com/video/3295642')
+        'http://v.yinyuetai.com/video/3295642'
+        'http://v.yinyuetai.com/video/3394527')
+    end
+    object btnTest: TButton
+      Left = 992
+      Top = 3
+      Width = 75
+      Height = 25
+      Caption = #27979#35797
+      TabOrder = 6
+      OnClick = btnTestClick
     end
   end
   object Bar1: TStatusBar

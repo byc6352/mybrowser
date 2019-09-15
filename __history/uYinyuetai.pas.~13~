@@ -128,7 +128,6 @@ begin
       uDown.downloadtofile(videoInfo.videoUrl[i],localFileName); //下载视频文件；
   end;
   msg:='视频：'+videoInfo.videoName+'下载完毕!';
-  PostMessage(mForm, WM_DOWN_FILE,2,videoInfo.videoCount);
   Result := 0;
 end;
 procedure downloadThread(videoInfoUrl:string);

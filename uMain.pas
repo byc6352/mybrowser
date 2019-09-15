@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
   Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi,uData,
-  Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,
+  Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,uLog,
   EmbeddedWB;
 
 type
@@ -44,6 +44,7 @@ type
     DBGrid2: TDBGrid;
     Splitter3: TSplitter;
     cmbUrl: TComboBox;
+    btnTest: TButton;
     procedure FormShow(Sender: TObject);
 
     procedure listDataSelectItem(Sender: TObject; Item: TListItem;
@@ -73,6 +74,7 @@ type
       var URL: OleVariant);
     procedure Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
       var URL: OleVariant);
+    procedure btnTestClick(Sender: TObject);
   private
     { Private declarations }
     bProcessData,bDocumentComplete:boolean;
@@ -82,7 +84,7 @@ type
     procedure getResource();
     function findResource(url:string):boolean;
     procedure getDataToShow();
-
+    procedure AppException(Sender: TObject; E: Exception);
   public
     { Public declarations }
   end;
@@ -96,14 +98,21 @@ implementation
 {$R *.dfm}
 uses
   uYinyuetai;
-
+procedure TfMain.AppException(Sender: TObject; E: Exception);
+begin
+  //Application.ShowException(E);
+  //Application.Terminate;
+  Log(e.Message);
+end;
 function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
 var
   protocol:string;
 begin
+  result:='';
+  if(servername='')or(serverport=0)then exit;
+  protocol:='http';
   case ServerPort of
   80:begin
-    protocol:='http';
     result:=protocol+'://'+ServerName+ObjectName;
   end;
   443:begin
@@ -111,7 +120,6 @@ begin
     result:=protocol+'://'+ServerName+ObjectName;
   end;
   else begin
-    protocol:='http';
     result:=protocol+'://'+ServerName+':'+inttostr(ServerPort)+ObjectName;
   end;
   end;
@@ -125,6 +133,11 @@ var
   dtGet:tdatetime;
 begin
   if(bProcessData)then exit;
+  //for I := 0 to uData.iData-1 do
+  //begin
+  //  uLog.Log(uData.datas[i].ObjectName);
+  //end;
+
   while listData.Items.Count<uData.iData do
   begin
     bProcessData:=true;
@@ -141,8 +154,10 @@ begin
     ServerName:=uData.datas[i].ServerName;
     ServerPort:=uData.datas[i].ServerPort;
 
+    Log(ObjectName);
+
     data:=listData.Items.Add;
-    data.Caption:=ufuncs.getDataTimeString(dtGet);
+    data.Caption:=ufuncs.getDateTimeString(dtGet,0);
     data.SubItems.Add(ServerName);
     data.SubItems.Add(inttostr(ServerPort));
     data.SubItems.Add(verb);
@@ -153,13 +168,14 @@ begin
     data.SubItems.Add(qData);
     data.SubItems.Add(rData);
     if(chkDownAll.Checked)then begin
-      url:=MergeUrl(Servername,ObjectName,Serverport);
-      uDown.addUrl(url);
-      dm.addPageDetail(pageID,servername,inttostr(ServerPort),ObjectName,verb,len,qHeader,rHeader,qData,rData,dtGet);
-      if(findResource(ObjectName))then memoinfo.Lines.Add(url);
+      //url:=MergeUrl(Servername,ObjectName,Serverport);
+      //if(url<>'')then uDown.addUrl(url);
+      //dm.addPageDetail(pageID,servername,inttostr(ServerPort),ObjectName,verb,len,qHeader,rHeader,qData,rData,dtGet);
+      //if(findResource(ObjectName))then memoinfo.Lines.Add(url);
     end;
     //application.ProcessMessages;
   end;
+
   bProcessData:=false;
 end;
 function TfMain.findResource(url:string):boolean;
@@ -216,7 +232,7 @@ begin
   else if j=0 then
     bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']'
   else if j=2 then begin
-    memoInfo.lines.add(uYinyuetai.videoInfo);
+    memoInfo.lines.add(uYinyuetai.msg);
   end;
 end;
 procedure TfMain.httpMessage(var msg:TMessage);
@@ -318,6 +334,11 @@ begin
   web1.GoForward;
 end;
 
+procedure TfMain.btnTestClick(Sender: TObject);
+begin
+  uLog.Log('aa');
+end;
+
 procedure TfMain.cmbUrlChange(Sender: TObject);
 begin
   web1.Navigate(trim(cmburl.Items[cmburl.ItemIndex]));
@@ -357,8 +378,8 @@ end;
 
 procedure TfMain.FormCreate(Sender: TObject);
 begin
-
-  Set8087CW(Longword($133f));
+  Application.OnException := AppException;
+  //Set8087CW(Longword($133f));
   IEEmulator(11001);
   //IEEmulator();
 end;
@@ -368,7 +389,7 @@ begin
   //uhookweb.hForm:=fmain.Handle; //
   cmburl.ItemIndex:=0;
   timer1.Enabled:=false;
-  uDown.start(uConfig.workdir,fmain.Handle);
+  uDown.start(uConfig.webCache,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
 
@@ -399,26 +420,30 @@ begin
   doc:=web1.Document as IHTMLDocument2;
   getPageCode(doc,memcode.Lines);
   //doc.designMode:='On';
-  mPage:=doc.url;
-  mPort:=getPort(mPage);
+  if(mPage<>doc.url)then begin
+    mPage:=doc.url;
+    mPort:=getPort(mPage);
+    msite:=doc.domain;
+    mProtocol:=doc.protocol;
+    if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https' else mProtocol:='http';
 
-  msite:=doc.domain;
-  mProtocol:=doc.protocol;
-  if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https' else mProtocol:='http';
+    cmburl.Text:=mpage;
+    fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
 
-  cmburl.Text:=mpage;
-  fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
-  uHookweb.state:=STAT_IDLE;
-  bar1.Panels[0].Text:='页面加载完毕！';
+    if(chkDownAll.Checked)then begin
+      uDown.addUrl(mPage);
+      mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
+    end;
+    yinyuetai(mPage);
+  end else begin   //刷新
 
-
+  end;
   if(chkDownAll.Checked)then begin
-    uDown.addUrl(mPage);
     uDown.start();
-    mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
     timer1.Enabled:=true;
   end;
-  yinyuetai(mPage);
+  uHookweb.state:=STAT_IDLE;
+  bar1.Panels[0].Text:='页面加载完毕！';
 end;
 
 procedure TfMain.Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;

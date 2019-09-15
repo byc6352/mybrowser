@@ -75,7 +75,7 @@ type
       var URL: OleVariant);
   private
     { Private declarations }
-    bProcessData:boolean;
+    bProcessData,bDocumentComplete:boolean;
     mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
     procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
     procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
@@ -94,7 +94,8 @@ var
 implementation
 
 {$R *.dfm}
-
+uses
+  uYinyuetai;
 
 function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
 var
@@ -155,6 +156,7 @@ begin
       url:=MergeUrl(Servername,ObjectName,Serverport);
       uDown.addUrl(url);
       dm.addPageDetail(pageID,servername,inttostr(ServerPort),ObjectName,verb,len,qHeader,rHeader,qData,rData,dtGet);
+      if(findResource(ObjectName))then memoinfo.Lines.Add(url);
     end;
     //application.ProcessMessages;
   end;
@@ -165,11 +167,13 @@ const
   mp4='.mp4';
   swf='.swf';
   fla='.fla';
+  mvi='get-h-mv-info';
 begin
   result:=true;
   if pos(mp4,url)>0 then exit;
   if pos(swf,url)>0 then exit;
   if pos(fla,url)>0 then exit;
+  if pos(mvi,url)>0 then exit;
   result:=false;
 end;
 procedure TfMain.getResource();
@@ -209,8 +213,11 @@ begin
   j:=msg.WParam;
   if j=1 then
     bar1.Panels[1].Text:='下载完毕！'
-  else
-    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']';
+  else if j=0 then
+    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']'
+  else if j=2 then begin
+    memoInfo.lines.add(uYinyuetai.msg);
+  end;
 end;
 procedure TfMain.httpMessage(var msg:TMessage);
 var
@@ -385,6 +392,7 @@ var
   doc:IHTMLDocument2;
 begin
   if(Web1.ReadyState<>READYSTATE_COMPLETE)then exit;
+  if(uHookweb.state=STAT_IDLE)then exit;
   //if not assigned(web1.Document) then exit;
   //if(web1.Busy)then exit;
 
@@ -410,7 +418,7 @@ begin
     mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
     timer1.Enabled:=true;
   end;
-
+  yinyuetai(mPage);
 end;
 
 procedure TfMain.Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;

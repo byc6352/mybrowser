@@ -55,8 +55,6 @@ begin
   jsonObject := nil;
   result:=false;
   videoInfo.videoCount:=0;
-  if not fileexists(videoInfoFileName) then exit;
-
   try
     ss:=tstringlist.Create;
     ss.LoadFromFile(videoInfoFileName,TEncoding.UTF8);
@@ -94,18 +92,19 @@ begin
      k:=pos('?',videoUrl);
      if(k>0)then videoUrl:=leftstr(videoUrl,k-1);
      videoInfo.videoUrl[i]:=videoUrl;
-     videoInfo.videoCount:=i+1;
+     videoInfo.videoCount:=i;
    end;
    result:=true;
   finally
-    if(assigned(ss))then ss.Free;
-    if(assigned(jsonObject))then jsonObject.Free;
+    ss.Free;
+    if(assigned(jsonObject))then
+      jsonObject.Free;
   end;
 end;
 //------------------------------------------下载线程区------------------------------------------
 function ThreadProc(param: LPVOID): DWORD; stdcall;
 var
-  url,localFileName,fileExt,filename:string;
+  url,localFileName,fileExt:string;
   videoInfo:stVideoInfo;
   i:integer;
 begin
@@ -121,14 +120,11 @@ begin
   PostMessage(mForm, WM_DOWN_FILE,2,videoInfo.videoCount);
   for i:=0 to videoInfo.videoCount-1  do begin
     fileExt:=rightstr(videoInfo.videoUrl[i],4);
-    filename:=videoInfo.videoName;
-    if(not uFuncs.IsValidFileName(filename))then uFuncs.forceValidFileName(filename);
-    localFileName:=uConfig.yinyuetaiDir+'\'+filename+'['+videoInfo.qualityLevel[i]+']'+fileExt;
+    localFileName:=uConfig.yinyuetaiDir+'\'+videoInfo.videoName+'['+videoInfo.qualityLevel[i]+']'+fileExt;
     if(not fileExists(localFileName))then
       uDown.downloadtofile(videoInfo.videoUrl[i],localFileName); //下载视频文件；
   end;
-  msg:='视频：'+videoInfo.videoName+'下载完毕!';
-  PostMessage(mForm, WM_DOWN_FILE,2,videoInfo.videoCount);
+
   Result := 0;
 end;
 procedure downloadThread(videoInfoUrl:string);

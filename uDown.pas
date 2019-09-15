@@ -113,10 +113,10 @@ begin
   result:=localpath;
   if(fileexists(localpath))then exit;
   if(DownloadToFile(remotepath,localpath))then begin
-    Log('suc:'+remotepath+#13#10+localpath);
+    //Log('suc:'+remotepath+#13#10+localpath);
     result:=localpath;
   end else begin
-    Log('fal:'+remotepath+#13#10+localpath);
+    //Log('fal:'+remotepath+#13#10+localpath);
     result:='';
   end;
 end;

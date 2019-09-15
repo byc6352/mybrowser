@@ -75,10 +75,10 @@ begin
   //result:=-1;
   //if(wRequest<>datas[iData].wRequest)then exit;
   if(dType=DATA_TYPE_REQUEST)then begin
-    filename:=uFuncs.getFilename(uConfig.webCache,'request','.txt');
+    filename:=uFuncs.getFilename(uConfig.workdir,'request','.txt');
     datas[iData-1].qData:=filename;
   end else begin
-    filename:=uFuncs.getFilename(uConfig.webCache,'reponse','.txt');
+    filename:=uFuncs.getFilename(uConfig.workdir,'reponse','.txt');
     datas[iData-1].rData:=filename;
   end;
   uFuncs.saveTofile(filename,p,len);

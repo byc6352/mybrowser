@@ -55,8 +55,6 @@ begin
   jsonObject := nil;
   result:=false;
   videoInfo.videoCount:=0;
-  if not fileexists(videoInfoFileName) then exit;
-
   try
     ss:=tstringlist.Create;
     ss.LoadFromFile(videoInfoFileName,TEncoding.UTF8);
@@ -98,8 +96,9 @@ begin
    end;
    result:=true;
   finally
-    if(assigned(ss))then ss.Free;
-    if(assigned(jsonObject))then jsonObject.Free;
+    ss.Free;
+    if(assigned(jsonObject))then
+      jsonObject.Free;
   end;
 end;
 //------------------------------------------下载线程区------------------------------------------
@@ -128,7 +127,6 @@ begin
       uDown.downloadtofile(videoInfo.videoUrl[i],localFileName); //下载视频文件；
   end;
   msg:='视频：'+videoInfo.videoName+'下载完毕!';
-  PostMessage(mForm, WM_DOWN_FILE,2,videoInfo.videoCount);
   Result := 0;
 end;
 procedure downloadThread(videoInfoUrl:string);

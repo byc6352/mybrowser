@@ -11,7 +11,7 @@ uses
   function gets(p:pointer;dwSize:DWORD):string;
   //function getDateTimeString():string;overload;
   //function getDateTimeString(dt:tdatetime):string;overload;
-  function getDateTimeString(dt:tdatetime;formatType:integer):string;
+  function getDateTimeString(dt:tdatetime;formatType:integer):string;overload;
   function my_strtodatetime(str_datetime:string):tdatetime;
   procedure IEEmulator(VerCode: Integer);overload;
   function IEEmulator(): Boolean;overload;

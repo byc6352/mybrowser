@@ -190,6 +190,8 @@ end;
 function replaced_HttpSendRequestW(hRequest: HINTERNET; lpszHeaders: LPWSTR;
   dwHeadersLength: DWORD; lpOptional: Pointer;
   dwOptionalLength: DWORD): BOOL; stdcall;
+var
+  s:string;
 begin
 
   result:=original_HttpSendRequestW(hRequest,lpszHeaders,dwHeadersLength,lpOptional,dwOptionalLength);
@@ -197,11 +199,13 @@ begin
   if(dwHeadersLength>0)then begin
     //gqHeaders:=lpszHeaders;
     //if not debug then sendMessage(hform, WM_CAP_WORK,IDX_HttpSendRequestW,0);
-    //MessageBeep(1000); //简单的响一声
+    s:=lpszHeaders;
+    MessageBeep(2000); //简单的响一声
   end;
   if(dwOptionalLength>0)then begin
     //gQData:=pchar(lpOptional);
     //if not debug then sendMessage(hform, WM_CAP_WORK,IDX_HttpSendRequestW,0);
+    s:=pchar(lpOptional);
     MessageBeep(2000); //简单的响一声
   end;
 end;

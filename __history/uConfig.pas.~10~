@@ -9,11 +9,9 @@ const
   DEBUG=true;
   DB_NAME:string='web.mdb';
   WORK_DIR='web';
-  WEB_CACHE='cache';
   LOG_NAME:string='webLog.txt';
-  YINYUETAI_DIR='yinyuetai';
 var
-  workdir,yinyuetaiDir,webCache:string;
+  workdir:string;
   dbfile,dbConn,logfile:string;// 数据库子目录,数据库
   isInit:boolean=false;
 procedure init();
@@ -27,13 +25,8 @@ begin
   me:=ParamStr(0);
   workdir:=extractfilepath(me)+WORK_DIR;
   if(not directoryexists(workdir))then forcedirectories(workdir);
-  webCache:=workdir+'\'+WEB_CACHE;
-  if(not directoryexists(webCache))then forcedirectories(webCache);
-  yinyuetaiDir:=workdir+'\'+YINYUETAI_DIR;
-  if(not directoryexists(yinyuetaiDir))then forcedirectories(yinyuetaiDir);
   logfile:=workdir+'\'+LOG_NAME;
   dbfile:=workdir+'\'+DB_NAME;
-
   //D:\works\delphi\authserver\Win32\Debug\database\author.mdb
   dbConn := 'Provider = MicroSoft.jet.OLEDB.4.0;'+
                        'Persist Security Info = False;'+

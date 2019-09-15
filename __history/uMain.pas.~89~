@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
   Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi,uData,
-  Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,
+  Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,uLog,
   EmbeddedWB;
 
 type
@@ -44,6 +44,7 @@ type
     DBGrid2: TDBGrid;
     Splitter3: TSplitter;
     cmbUrl: TComboBox;
+    btnTest: TButton;
     procedure FormShow(Sender: TObject);
 
     procedure listDataSelectItem(Sender: TObject; Item: TListItem;
@@ -73,9 +74,10 @@ type
       var URL: OleVariant);
     procedure Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
       var URL: OleVariant);
+    procedure btnTestClick(Sender: TObject);
   private
     { Private declarations }
-    bProcessData:boolean;
+    bProcessData,bDocumentComplete:boolean;
     mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
     procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
     procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
@@ -95,7 +97,7 @@ implementation
 
 {$R *.dfm}
 uses
-  System.json;
+  uYinyuetai;
 
 function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
 var
@@ -213,8 +215,11 @@ begin
   j:=msg.WParam;
   if j=1 then
     bar1.Panels[1].Text:='下载完毕！'
-  else
-    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']';
+  else if j=0 then
+    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']'
+  else if j=2 then begin
+    memoInfo.lines.add(uYinyuetai.msg);
+  end;
 end;
 procedure TfMain.httpMessage(var msg:TMessage);
 var
@@ -315,6 +320,11 @@ begin
   web1.GoForward;
 end;
 
+procedure TfMain.btnTestClick(Sender: TObject);
+begin
+  uLog.Log('aa');
+end;
+
 procedure TfMain.cmbUrlChange(Sender: TObject);
 begin
   web1.Navigate(trim(cmburl.Items[cmburl.ItemIndex]));
@@ -365,7 +375,7 @@ begin
   //uhookweb.hForm:=fmain.Handle; //
   cmburl.ItemIndex:=0;
   timer1.Enabled:=false;
-  uDown.start(uConfig.workdir,fmain.Handle);
+  uDown.start(uConfig.webCache,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
 
@@ -389,6 +399,7 @@ var
   doc:IHTMLDocument2;
 begin
   if(Web1.ReadyState<>READYSTATE_COMPLETE)then exit;
+  if(uHookweb.state=STAT_IDLE)then exit;
   //if not assigned(web1.Document) then exit;
   //if(web1.Busy)then exit;
 
@@ -414,7 +425,7 @@ begin
     mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
     timer1.Enabled:=true;
   end;
-
+  yinyuetai(mPage);
 end;
 
 procedure TfMain.Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
@@ -436,25 +447,7 @@ begin
   web1.Navigate(string(URL)); // 再指回WebBrowser1
   Cancel := True;
 end;
-//----------------------------------------------音乐台---------------------------------------
-function yinyuetai(url:string):boolean;
-const
-  VIDEO_URL='v.yinyuetai.com/video'; //音乐台视频地址；
-  VIDEO_INF_URL='http://ext.yinyuetai.com/main/get-h-mv-info?json=true&videoId='; //音乐台视频信息地址
-var
-  jsonObject: TJSONObject; // JSON类
-  i,j: Integer; // 循环变量
-  tmp,videoID,videoInfoUrl: string; // 临时使用变量 ,视频ID，视频信息地址
-  jsonArray: TJSONArray; // JSON数组变量
-  subJsonObject: TJSONObject;
-  ss:tstrings;
-begin
-  result:=false;
-  i:=pos(VIDEO_URL,url);
-  if(i=0)then exit;
-  videoID:=rightstr(url,7);
-  videoInfoUrl:=VIDEO_INF_URL+videoID;
-end;
+
 
 
 //----------------------------------------------函数区---------------------------------------
