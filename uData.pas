@@ -2,7 +2,7 @@ unit uData;
 
 interface
 uses
-  windows,sysutils,uFuncs,uConfig;
+  windows,sysutils,uFuncs,uConfig,classes;
 const
   MAX_RECORD=10000;//最大记录数；
   DATA_TYPE_REQUEST=0;//请求的数据；
@@ -11,6 +11,7 @@ type
   stData=record
     wRequest:DWORD;
     ServerPort:DWORD;
+    dataLen:DWORD;
     dt:tdatetime; //时间
     ServerName:string;//服务器名称；
     ObjectName:string;   //请求对象
@@ -31,7 +32,7 @@ var
   server:stServer;
   datas:array[0..MAX_RECORD] of stData;
   iData:integer;//当前记录指针；
-
+  hLocalFile:HWND;
 
 function addUrl(wConnect,wRequest:DWORD;ObjectName:string;verb:string):integer;
   //添加qHeader,rHeader,len;
@@ -40,7 +41,13 @@ function addHeader(wRequest:DWORD;qHeader:string;rHeader:string;len:string):inte
 function addData(wRequest:DWORD;dType:DWORD;p:pointer;len:DWORD):integer;
 //
 procedure clear;
+//procedure saveData();
+procedure saveData();
+//
+procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
 
+procedure myCloseHandle(wInet:DWORD);
+procedure myCloseFileHandle(var hFile:HWND);
 implementation
 //添加URL,verb;
 function addUrl(wConnect,wRequest:DWORD;ObjectName:string;verb:string):integer;
@@ -53,6 +60,12 @@ begin
   datas[iData].dt:=now();
   datas[iData].ObjectName:=ObjectName;
   datas[iData].verb:=verb;
+  datas[iData].dataLen:=0;
+  datas[iData].len:='';
+  datas[iData].qHeader:='';
+  datas[iData].rHeader:='';
+  datas[iData].qData:='';
+  datas[iData].rData:='';
   iData:=iData+1;
   if(iData>=MAX_RECORD)then iData:=0;
   result:=iData;
@@ -88,5 +101,130 @@ end;
 procedure clear;
 begin
   iData:=0;
+end;
+
+procedure saveData();
+var
+  s,stime,ServerName,sPort,ObjectName,verb,len,dataLen,qData,rData:string;
+  ss:tstrings;
+  i:integer;
+begin
+  if(idata=0)then exit;
+  ss:=tstringlist.Create;
+  stime:='datetime'; //2019-09-18 14:48:33
+  stime:=stime+Stringofchar(' ',32-length(stime));
+
+  verb:='verb';
+  verb:=verb+Stringofchar(' ',8-length(verb));
+
+  ServerName:='ServerName';
+  ServerName:=ServerName+Stringofchar(' ',32-length(ServerName));
+
+  sPort:='ServerPort';
+  sPort:=sPort+Stringofchar(' ',16-length(sPort));
+
+  ObjectName:='ObjectName';
+  ObjectName:=ObjectName+Stringofchar(' ',128-length(ObjectName));
+
+  len:='len';
+  len:=len+Stringofchar(' ',12-length(len));
+
+  dataLen:='dataLen';
+  dataLen:=dataLen+Stringofchar(' ',12-length(dataLen));
+
+  qData:='request data';
+  qData:=qData+Stringofchar(' ',64-length(qData));
+
+  rData:='response data';
+  rData:=rData+Stringofchar(' ',64-length(rData));
+  s:=stime+verb+Servername+sPort+ObjectName+len+dataLen+qData+rData;
+  ss.Add(s);
+  for I := 0 to iData-1 do
+  begin
+    stime:=ufuncs.getDateTimeString(datas[i].dt,0); //
+    stime:=stime+Stringofchar(' ',32-length(stime));
+
+    verb:=datas[i].verb;
+    verb:=verb+Stringofchar(' ',8-length(verb));
+
+    ServerName:=datas[i].ServerName;
+    ServerName:=ServerName+Stringofchar(' ',32-length(ServerName));
+
+    sPort:=inttostr(datas[i].ServerPort);
+    sPort:=sPort+Stringofchar(' ',16-length(sPort));
+
+    ObjectName:=datas[i].ObjectName;
+    ObjectName:=ObjectName+Stringofchar(' ',128-length(ObjectName));
+
+    len:=datas[i].len;
+    len:=len+Stringofchar(' ',12-length(len));
+
+    dataLen:=inttostr(datas[i].dataLen);
+    dataLen:=dataLen+Stringofchar(' ',12-length(dataLen));
+
+    qData:=datas[i].qData;
+    qData:=qData+Stringofchar(' ',64-length(qData));
+
+    rData:=datas[i].rData;
+    rData:=rData+Stringofchar(' ',64-length(rData));
+    s:=stime+verb+Servername+sPort+ObjectName+len+dataLen+qData+rData;
+    ss.Add(s);
+  end;
+  ss.SaveToFile(getFileName(uConfig.workdir,'all','.txt'));
+  ss.Free;
+end;
+
+//--------------------------------------------------------------------------------
+procedure myCloseFileHandle(var hFile:HWND);
+begin
+  if(hFile=0)then exit;
+  try
+    closeHandle(hFile);
+  finally
+    hFile:=0;
+  end;
+
+end;
+procedure myCloseHandle(wInet:DWORD);
+begin
+  if(wInet<>uData.datas[idata-1].wRequest)then exit;
+  if(hLocalFile<>0)then begin
+    closeHandle(hLocalFile);
+    hLocalFile:=0;
+  end;
+end;
+procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
+var
+  localFileName,ServerName,ObjectName:string;
+  ServerPort:DWORD;
+  lpNumberOfBytesWritten:DWORD;
+  ret:BOOL;
+begin
+  if(wFile<>uData.datas[idata-1].wRequest)then exit;
+  try
+  if(uData.datas[idata-1].dataLen=0)then begin
+    ServerName:=uData.datas[idata-1].ServerName;
+    ObjectName:=uData.datas[idata-1].ObjectName;
+    ServerPort:=uData.datas[idata-1].ServerPort;
+    localFileName:=url2file(ServerName,ObjectName,ServerPort);
+    if(localFileName='')then exit;
+    if(fileexists(localFileName))then exit;
+    if(hLocalFile<>0)then myCloseFileHandle(hLocalFile);
+    uData.datas[idata-1].rData:=localFilename;
+    hLocalFile:=CreateFile(pchar(localFileName),GENERIC_WRITE,FILE_SHARE_WRITE,nil,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0);
+    if(hLocalFile = INVALID_HANDLE_VALUE)then exit;
+  end else begin
+    if(hLocalFile=0)then exit;
+  end;
+  lpNumberOfBytesWritten:=0;
+  while(lpNumberOfBytesWritten<lpdwNumberOfBytesRead)do
+  begin
+    ret:=writeFile(hLocalFile,lpBuffer^,lpdwNumberOfBytesRead,lpNumberOfBytesWritten,0);
+    if(ret=false)then begin CloseHandle(hLocalFile);hLocalFile:=0;exit;end;
+  end;
+  finally
+    uData.datas[idata-1].dataLen:=uData.datas[idata-1].dataLen+lpdwNumberOfBytesRead;
+  end;
+
 end;
 end.

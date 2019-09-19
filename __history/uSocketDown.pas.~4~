@@ -1,0 +1,191 @@
+unit uSocketDown;
+
+interface
+uses
+  windows;
+  {
+const
+  CRLF = #13#10;
+  SFileContentLen = 'content-length: ';
+  SUserAgent =
+  'User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; .NET CLR 1.0.3705)';
+  SRequestFileHead =
+  'HEAD %s HTTP/1.1' + CRLF +
+  'Pragma: no-cache' + CRLF +
+  'Cache-Control: no-cache' + CRLF +
+  SUserAgent + CRLF +
+  'Host: %s' + CRLF + CRLF;
+  SRequestDownFile =
+  'GET %s HTTP/1.1' + CRLF +
+  'Accept: */*' + CRLF +
+  SUserAgent + CRLF +
+  'RANGE: bytes=0-' + CRLF +
+  'Host: %s' + CRLF + CRLF;
+  }
+function DownloadWithSocket(const AUrl: string): string;
+implementation
+uses
+  winsock,sysutils,strutils,uLog;
+function DownloadWithSocket(const AUrl: string): string;
+const
+  CRLF = #13#10;
+  SFileContentLen = 'content-length: ';
+  SUserAgent ='User-Agent: Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/7.0)';
+  sAccept='Accept: */*';
+  sAccept-Language='Accept-Language: zh-CN';
+  sAccept-Encoding='Accept-Encoding: gzip, deflate';
+
+  SRequestFileHead =
+  'HEAD %s HTTP/1.1' + CRLF +
+  //'Pragma: no-cache' + CRLF +
+  //'Cache-Control: no-cache' + CRLF +
+  SUserAgent + CRLF +
+  'Host: %s' + CRLF + CRLF;
+  SRequestDownFile =
+  'GET %s HTTP/1.1' + CRLF +
+  'Accept: */*' + CRLF +
+  SUserAgent + CRLF +
+  'RANGE: bytes=0-' + CRLF +
+  'Host: %s' + CRLF + CRLF;
+
+  procedure ExtractHostAndFileName(const AURL: string;
+    var AHost, AFileName: string; APort: PString = nil);
+  const
+    HttpHead = 'http://';
+    HttpHeadLen = Length(HttpHead);
+  var
+    I: Integer;
+  begin
+    AHost := AURL;
+    I := Pos(HttpHead, AURL);
+    if I <> 0 then
+    AHost := Copy(AHost, I + HttpHeadLen, MaxInt);
+    I := AnsiPos('/', AHost);
+    while I <> 0 do
+    begin
+    AHost := Copy(AHost, 1, I - 1);
+    I := AnsiPos('/', AHost);
+    end;
+    I := Pos(AHost, AURL) + Length(AHost);
+    AFileName := Copy(AURL, i, MaxInt);
+    I := Pos(':', AHost);
+    if I <> 0 then
+    begin
+    if Assigned(APort) then
+    APort^ := Copy(AHost, I + 1, MaxInt);
+    AHost := Copy(AHost, 1, I - 1);
+    end;
+  end;
+
+  var
+    Socket: TSocket;
+  function WaitForSocket(Timeout: Integer): Boolean;
+  var
+  FDSet: TFDSet;
+  TimeVal: TTimeVal;
+  begin
+    TimeVal.tv_sec := Timeout;
+    TimeVal.tv_usec := 0;
+    FD_ZERO(FDSet);
+    FD_SET(Socket, FDSet);
+    Result := WinSock.select(0, @FDSet, nil, nil, @TimeVal) > 0;
+  end;
+
+  procedure Add(var S: string; Buf: PChar; Count: Integer);
+  var
+    Len: Integer;
+  begin
+    Len := Length(S);
+    SetLength(S, Len + Count);
+    Move(Buf^, S[Len + 1], Count);
+  end;
+
+  function ReceiveLine: string;
+  var
+    C: Char;
+    RetLen: Integer;
+  begin
+    Result := '';
+    while Socket <> INVALID_SOCKET do
+    begin
+    RetLen := recv(Socket, C, 1, 0);
+    if (RetLen <= 0) or (RetLen = SOCKET_ERROR) then
+    break;
+    Add(Result, @C, 1);
+    if Pos(CRLF, Result) > 0 then break;
+    end;
+  end;
+
+  function SendCommand(const Command: string): string;
+  var
+    P: PChar;
+    Data: string;
+  begin
+    uLog.Log(Command);
+    Result := '';
+    P := PChar(Command);
+    send(Socket, P^, Length(Command), 0);
+    while WaitForSocket(5) do
+    begin
+      Data := ReceiveLine;
+      if (Data = '') or (Data = CRLF) then
+      break else
+      Add(Result, PChar(Data), Length(Data));
+    end;
+    uLog.Log(Result);
+  end;
+
+  procedure InitSocket(const AHost: string);
+  var
+    Addr: TSockAddrIn;
+    Data: TWSAData;
+    HostEnt: PHostEnt;
+    Timeout: Integer;
+  begin
+    Winsock.WSAStartup($0101, Data);
+    Socket := WinSock.socket(PF_INET, SOCK_STREAM, IPPROTO_IP);
+    if Socket = INVALID_SOCKET then
+      raise Exception.Create(SysErrorMessage(GetLastError));
+    Timeout := 1000;
+    WinSock.setsockopt(Socket, SOL_SOCKET, SO_RCVTIMEO, @Timeout, SizeOf(TimeOut));
+    HostEnt := gethostbyname(PansiChar(ansistring(AHost)));
+    FillChar(Addr.sin_addr, SizeOf(Addr.sin_addr), 0);
+    Addr.sin_family := PF_INET;
+    if HostEnt <> nil then
+      Move(HostEnt^.h_addr^[0], Addr.sin_addr.S_addr, HostEnt^.h_length)
+    else
+    raise Exception.CreateFmt('主机没找到: %s', [AHost]);
+    Addr.sin_port := htons(80);
+    if connect(Socket, Addr, SizeOf(Addr)) <> 0 then
+      raise Exception.Create(SysErrorMessage(GetLastError));
+  end;
+  procedure UnInitSocket;
+  begin
+    if Socket <> INVALID_SOCKET then
+      closesocket(Socket);
+    WSACleanup;
+  end;
+
+var
+  Data, FileName, Host: string;
+begin
+  Socket := INVALID_SOCKET;
+  ExtractHostAndFileName(AUrl, Host, FileName);
+  try
+    InitSocket(Host);
+    if FileName = '' then
+    FileName := '/';
+    Data := SendCommand(Format(SRequestFileHead, [FileName, Host]));
+    Data := SendCommand(Format(SRequestDownFile, [FileName, Host]));
+    while True do
+    begin
+      Data := ReceiveLine;
+      if Data = '' then break;
+      Add(Result, PChar(Data), Length(Data));
+      //Application.ProcessMessages;
+    end;
+  finally
+    UnInitSocket;
+  end;
+end;
+end.

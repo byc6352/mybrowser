@@ -1,0 +1,88 @@
+unit uDataDown;
+
+interface
+uses
+  winapi.windows,sysutils,strutils;
+var
+  g:DWORD;
+  hLocalFile:HWND;
+procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
+//链接转换为本地文件路径
+function url2file(ServerName,ObjectName:string;ServerPort:DWORD):string;
+procedure myCloseHandle(wInet:DWORD);
+implementation
+uses
+  uData,uConfig,uFuncs;
+var
+  mWorkDir:string;
+procedure myCloseHandle(wInet:DWORD);
+begin
+  if(wInet<>uData.datas[idata-1].wRequest)then exit;
+  if(hLocalFile<>0)then begin
+    closeHandle(hLocalFile);
+    hLocalFile:=0;
+  end;
+end;
+procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
+var
+  localFileName,ServerName,ObjectName:string;
+  ServerPort:DWORD;
+  lpNumberOfBytesWritten:DWORD;
+  ret:BOOL;
+begin
+  if(wFile<>uData.datas[idata-1].wRequest)then exit;
+  try
+  if(uData.datas[idata-1].dataLen=0)then begin
+    ServerName:=uData.datas[idata-1].ServerName;
+    ObjectName:=uData.datas[idata-1].ObjectName;
+    ServerPort:=uData.datas[idata-1].ServerPort;
+    localFileName:=url2file(ServerName,ObjectName,ServerPort);
+    if(localFileName='')then exit;
+    if(fileexists(localFileName))then exit;
+    if(hLocalFile<>0)then exit;
+    uData.datas[idata-1].qData:=localFilename;
+    hLocalFile:=CreateFile(pchar(localFileName),GENERIC_WRITE,FILE_SHARE_WRITE,nil,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0);
+    if(hLocalFile = INVALID_HANDLE_VALUE)then exit;
+  end else begin
+    if(hLocalFile=0)then exit;
+  end;
+  lpNumberOfBytesWritten:=0;
+  while(lpNumberOfBytesWritten<lpdwNumberOfBytesRead)do
+  begin
+    ret:=writeFile(hLocalFile,lpBuffer^,lpdwNumberOfBytesRead,lpNumberOfBytesWritten,0);
+    if(ret=false)then begin CloseHandle(hLocalFile);hLocalFile:=0;exit;end;
+  end;
+  finally
+    uData.datas[idata-1].dataLen:=uData.datas[idata-1].dataLen+lpdwNumberOfBytesRead;
+  end;
+
+end;
+
+//链接转换为本地文件路径
+function url2file(ServerName,ObjectName:string;ServerPort:DWORD):string;
+var
+  temp,fullFilePath,fileName,filePath,fileServer:string; //forcedirectories(mWorkDir);
+begin
+  temp:=ObjectName;
+  result:='';
+  if(leftstr(temp,1)<>'/')then exit;
+  if(rightstr(temp,1)='/')then temp:=temp+'index.htm';
+  temp:=replacestr(temp,'/','\');
+  filename:=extractfilename(temp);
+  filePath:=extractfilepath(temp);
+  forceValidFileName(filename);
+  if(ServerPort<>80)and(ServerPort<>443)then
+    fileServer:=ServerName+'\'+inttostr(ServerPort)
+  else
+    fileServer:=ServerName;
+  fullFilePath:=mworkdir+'\'+fileServer+filePath;
+  if not directoryexists(fullFilePath) then  forcedirectories(fullFilePath);
+
+  result:=fullFilePath+filename;
+end;
+initialization
+  if not uConfig.isInit then uConfig.init();
+  mWorkDir:=uConfig.webCache;
+finalization
+
+end.

@@ -11,7 +11,9 @@ uses
   uData in 'uData.pas',
   uDatabase in 'uDatabase.pas',
   uDM in 'uDM.pas' {dm: TDataModule},
-  uYinyuetai in 'uYinyuetai.pas';
+  uYinyuetai in 'uYinyuetai.pas',
+  uDataDown in 'uDataDown.pas',
+  uSocketDown in 'uSocketDown.pas';
 
 {$R *.res}
 

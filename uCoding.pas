@@ -20,7 +20,7 @@ function AnsiToUnicode(Str: ansistring): string;
 var
   s: ansistring;
   i:integer;
-  j,k:string[2];
+  j,k:String[2];
   a:array [1..1000] of  ansichar;
 begin
   s:='';

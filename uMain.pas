@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
-  Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uDown,uConfig, Vcl.Menus,shellapi,uData,
+  Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uConfig, Vcl.Menus,shellapi,uData,
   Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,uLog,
   EmbeddedWB;
 
@@ -78,7 +78,8 @@ type
   private
     { Private declarations }
     bProcessData,bDocumentComplete:boolean;
-    mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+    //mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+    mWorkDir:string;
     procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
     procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
     procedure getResource();
@@ -97,11 +98,14 @@ implementation
 
 {$R *.dfm}
 uses
-  uYinyuetai;
+  uYinyuetai,uSocketDown;
 procedure TfMain.AppException(Sender: TObject; E: Exception);
 begin
   //Application.ShowException(E);
   //Application.Terminate;
+  //HANDLE
+  //fileexists
+
   Log(e.Message);
 end;
 function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
@@ -128,7 +132,7 @@ procedure TfMain.getDataToShow();
 var
   data:TListItem;
   i,j:integer;
-  pageID,url,ObjectName,verb,len,qHeader,rHeader,qData,rData,ServerName:string;
+  pageID,url,ObjectName,verb,len,qHeader,rHeader,qData,rData,ServerName,dataLen:string;
   ServerPort:DWORD;
   dtGet:tdatetime;
 begin
@@ -142,7 +146,7 @@ begin
   begin
     bProcessData:=true;
     i:=listData.Items.Count;
-    pageID:=mPageIdx;
+    //pageID:=mPageIdx;
     dtGet:=uData.datas[i].dt;
     verb:=uData.datas[i].verb;
     ObjectName:=uData.datas[i].ObjectName;
@@ -153,8 +157,9 @@ begin
     rData:=uData.datas[i].rData;
     ServerName:=uData.datas[i].ServerName;
     ServerPort:=uData.datas[i].ServerPort;
+    dataLen:=inttostr(uData.datas[i].dataLen);
 
-    Log(ObjectName);
+    //Log(ObjectName);
 
     data:=listData.Items.Add;
     data.Caption:=ufuncs.getDateTimeString(dtGet,0);
@@ -167,11 +172,10 @@ begin
     data.SubItems.Add(rHeader);
     data.SubItems.Add(qData);
     data.SubItems.Add(rData);
+    data.SubItems.Add(dataLen);
     if(chkDownAll.Checked)then begin
-      //url:=MergeUrl(Servername,ObjectName,Serverport);
-      //if(url<>'')then uDown.addUrl(url);
       //dm.addPageDetail(pageID,servername,inttostr(ServerPort),ObjectName,verb,len,qHeader,rHeader,qData,rData,dtGet);
-      //if(findResource(ObjectName))then memoinfo.Lines.Add(url);
+      if(findResource(ObjectName))then memoinfo.Lines.Add(url);
     end;
     //application.ProcessMessages;
   end;
@@ -230,7 +234,7 @@ begin
   if j=1 then
     bar1.Panels[1].Text:='下载完毕！'
   else if j=0 then
-    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uDown.mdowns[i]+']'
+    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uData.datas[i].ObjectName+']'
   else if j=2 then begin
     memoInfo.lines.add(uYinyuetai.msg);
   end;
@@ -268,11 +272,12 @@ end;
 procedure TfMain.nOpenDirClick(Sender: TObject);
 var
   url,localdir,objectName,serverName:string;
+  ServerPort:DWORD;
 begin
   objectName:=listdata.Selected.SubItems[3];
   serverName:=listdata.Selected.SubItems[0];
-  if pos(serverName,objectName)<=0 then url:=serverName+objectName;
-  localdir:=uDown.url2file(url);
+  ServerPort:=strtoint(listdata.Selected.SubItems[1]);
+  localdir:=url2file(serverName,objectName,ServerPort);
   localdir:=extractfiledir(localdir);
   ShellExecute(Handle,'open','Explorer.exe',pchar(localdir),nil,1);
 end;
@@ -322,7 +327,7 @@ begin
   if MessageBox(0, '即将清空所有数据，请确认!', '警告', MB_OKCANCEL + MB_ICONWARNING) = ID_OK then  begin  //   MB_ICONQUESTION
     listData.Clear;
     memData.Lines.Clear;
-    uDown.clear();
+    udm.clear();
     uData.clear;
     bar1.Panels[0].Text:='数据已经清空！';
   end;
@@ -335,8 +340,25 @@ begin
 end;
 
 procedure TfMain.btnTestClick(Sender: TObject);
+var
+  s:ansistring;
+  ss:string;
+  filename:string;
 begin
-  uLog.Log('aa');
+  uData.saveData;
+  //uLog.Log('aa'); http://154.221.19.215/index.htm
+  //ss:=uSocketDown.DownloadWithSocket('http://mybrowse.osfipin.com/');
+  //s:=uSocketDown.DownloadWithSocket('http://154.221.19.215/index.htm');
+  //ss:=uFuncs.UTF8String(s);
+  //memoInfo.Lines.Add(ss);
+  //uSocketDown.DownloadWithSocket('http://154.221.19.215/index.htm','c:\tmp\1.htm');
+  //uSocketDown.DownloadWithSocket('154.221.19.215','/css/myIndex.css','c:\tmp\myIndex.js',80);
+  //uSocketDown.DownloadWithSocket('img1.c.yinyuetai.com','/others/admin/161222/0/3efa00caa6322aa820e87e58272ccfe3_0x0.jpg','c:\tmp\0.jpg',80);
+  //uSocketDown.DownloadWithSocket('s.c.yinyuetai.com','/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png',443);
+  dm.DownFileFromServer('https://s.c.yinyuetai.com/v2/images/modules/topbar/new_topbar1.png','c:\tmp\new_topbar.png');
+  //http://154.221.19.215/index.htm
+  //dm.DownFileFromServer('http://he.yinyuetai.com/uploads/videos/common/BF2B016CD600E2E135C4EA15D39F0537.mp4','c:\tmp\BF2B016CD600E2E135C4EA15D39F0537.mp4');
+  dm.DownFileFromServer('http://154.221.19.215/index.htm','c:\tmp\index.htm');
 end;
 
 procedure TfMain.cmbUrlChange(Sender: TObject);
@@ -373,7 +395,9 @@ end;
 
 procedure TfMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  uDown.stop;
+  //uDown.stop;
+  uData.saveData;
+  uDM.stop;
 end;
 
 procedure TfMain.FormCreate(Sender: TObject);
@@ -389,7 +413,8 @@ begin
   //uhookweb.hForm:=fmain.Handle; //
   cmburl.ItemIndex:=0;
   timer1.Enabled:=false;
-  uDown.start(uConfig.webCache,fmain.Handle);
+  //uDown.start(uConfig.webCache,fmain.Handle);
+  udm.start(uConfig.webCache,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
 
@@ -400,10 +425,14 @@ end;
 procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
   var URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
   var Cancel: WordBool);
+var
+  aUrl:string;
 begin
-  uDown.pause();
+  //uDown.pause();
   uHookweb.state:=STAT_BROWSING;
   timer1.Enabled:=false;
+  aUrl:=url;
+  dm.mpageIdx:=dm.addPageInfo('','','',aUrl);
   bar1.Panels[0].Text:='正在加载页面...';
 end;
 
@@ -420,26 +449,26 @@ begin
   doc:=web1.Document as IHTMLDocument2;
   getPageCode(doc,memcode.Lines);
   //doc.designMode:='On';
-  if(mPage<>doc.url)then begin
-    mPage:=doc.url;
-    mPort:=getPort(mPage);
-    msite:=doc.domain;
-    mProtocol:=doc.protocol;
-    if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https' else mProtocol:='http';
+  if(dm.mPage<>doc.url)then begin
+    dm.mPage:=doc.url;
+    dm.mPort:=getPort(dm.mPage);
+    dm.msite:=doc.domain;
+    dm.mProtocol:=doc.protocol;
+    if(dm.mProtocol='HyperText Transfer Protocol with Privacy')then dm.mProtocol:='https' else dm.mProtocol:='http';
 
-    cmburl.Text:=mpage;
-    fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
+    cmburl.Text:=dm.mpage;
+    fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+dm.mpage+')';
 
     if(chkDownAll.Checked)then begin
-      uDown.addUrl(mPage);
-      mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
+      //uDown.addUrl(mPage);
+      dm.mpageIdx:=dm.updatePageInfo(dm.mProtocol,dm.msite,dm.mPort,dm.mpage);
     end;
-    yinyuetai(mPage);
+    yinyuetai(dm.mPage);
   end else begin   //刷新
 
   end;
   if(chkDownAll.Checked)then begin
-    uDown.start();
+    //uDown.start();
     timer1.Enabled:=true;
   end;
   uHookweb.state:=STAT_IDLE;

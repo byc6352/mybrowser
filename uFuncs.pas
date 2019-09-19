@@ -18,7 +18,142 @@ uses
   function IsWin64: Boolean;
   function IsValidFileName(FileName: string): Boolean;
   function forceValidFileName(var FileName: string): Boolean;
+  function IsFileInUse(fName :string) : boolean;
+  //链接转换为本地文件路径
+function url2file(ServerName,ObjectName:string;ServerPort:DWORD):string;overload;
+function url2file(ServerName,ObjectName:string;ServerPort:DWORD;var url:string):string;overload;
+function url2file(url:string):string;overload;
+function utf8String(const s:ansiString):string;
+//获取主站地址；
+function getPort(url:string):string;
 implementation
+//链接转换为本地文件路径
+function url2file(url:string):string;
+var
+  p,i:integer;
+  temp,protocol,filePath,fileName:string; //forcedirectories(mWorkDir);
+begin
+  temp:=url;
+  if(rightstr(temp,1)='/')then temp:=temp+'index.htm';
+  p:=pos('/',temp);
+  if(p>0)then begin
+    protocol:=leftstr(temp,p-1);
+    if(protocol='http:')then temp:=rightstr(temp,length(temp)-7);  //去除http头部
+    if(protocol='https:')then temp:=rightstr(temp,length(temp)-8);  //去除https头部
+  end;
+  if pos(':',temp)>0 then temp:=replacestr(temp,':','/');
+  temp:=replacestr(temp,'/','\');
+  fileName:=extractfileName(temp);
+  forceValidFileName(filename);
+  filePath:=uConfig.webCache+'\'+extractfilePath(temp);
+  if not directoryexists(filePath) then  forcedirectories(filePath);
+  result:=filePath+filename;
+end;
+function utf8String(const s:ansiString):string;
+var
+  ms:TMemoryStream;
+  ss:tStrings;
+begin
+  ms:=TMemoryStream.Create;
+  ss:=TstringList.Create;
+  try
+    ms.Write(s[1],length(s));
+    ms.Position:=0;
+    ss.LoadFromStream(ms,TEncoding.UTF8);
+    result:=ss.Text;
+  finally
+    ms.Free;
+    ss.Free;
+  end;
+end;
+//获取主站地址；
+function getPort(url:string):string;
+var
+  dir,s:string;
+  p:integer;
+begin
+  s:=url;
+  p:=pos('/',s);
+  if(p<=0)then begin result:=url;exit;end;
+  dir:=leftstr(s,p-1);
+  if(dir='http:')then s:=rightstr(s,length(s)-7);
+  if(dir='https:')then s:=rightstr(s,length(s)-8);
+  p:=pos('/',s);
+  if(p<=0)then begin result:=url;exit;end;
+  s:=leftstr(s,p-1);
+  p:=pos(':',s);
+  if(p>0)then s:=rightstr(s,length(s)-p) else s:='';
+  result:=s;
+end;
+//链接转换为本地文件路径
+function url2file(ServerName,ObjectName:string;ServerPort:DWORD;var url:string):string;
+var
+  temp,fullFilePath,fileName,filePath,fileServer:string; //forcedirectories(mWorkDir);
+begin
+  temp:=ObjectName;
+  result:='';
+  if(leftstr(temp,1)<>'/')then exit;
+  if(rightstr(temp,1)='/')then temp:=temp+'index.htm';
+  temp:=replacestr(temp,'/','\');
+  filename:=extractfilename(temp);
+  filePath:=extractfilepath(temp);
+  forceValidFileName(filename);
+  case ServerPort of
+  80:begin
+    fileServer:=ServerName;
+    url:='http://'+ServerName+ObjectName;
+  end;
+  443:begin
+    fileServer:=ServerName;
+    url:='https://'+ServerName+ObjectName;
+  end;
+  else begin
+    fileServer:=ServerName+'\'+inttostr(ServerPort);
+    url:='http://'+ServerName+':'+inttostr(ServerPort)+ObjectName;
+  end;
+  end;
+
+  fullFilePath:=uConfig.webCache+'\'+fileServer+filePath;
+  if not directoryexists(fullFilePath) then  forcedirectories(fullFilePath);
+
+  result:=fullFilePath+filename;
+end;
+//链接转换为本地文件路径
+function url2file(ServerName,ObjectName:string;ServerPort:DWORD):string;
+var
+  temp,fullFilePath,fileName,filePath,fileServer:string; //forcedirectories(mWorkDir);
+begin
+  temp:=ObjectName;
+  result:='';
+  if(leftstr(temp,1)<>'/')then exit;
+  if(rightstr(temp,1)='/')then temp:=temp+'index.htm';
+  temp:=replacestr(temp,'/','\');
+  filename:=extractfilename(temp);
+  filePath:=extractfilepath(temp);
+  forceValidFileName(filename);
+  if(ServerPort<>80)and(ServerPort<>443)then
+    fileServer:=ServerName+'\'+inttostr(ServerPort)
+  else
+    fileServer:=ServerName;
+  fullFilePath:=uConfig.webCache+'\'+fileServer+filePath;
+  if not directoryexists(fullFilePath) then  forcedirectories(fullFilePath);
+
+  result:=fullFilePath+filename;
+end;
+
+
+function IsFileInUse(fName :string) : boolean;
+var
+   HFileRes : HFILE;
+begin
+   Result := false; //返回值为假(即文件不被使用)
+   if not FileExists(fName) then exit; //如果文件不存在则退出
+   HFileRes := CreateFile(pchar(fName), GENERIC_READ or GENERIC_WRITE,
+               0 {this is the trick!}, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+   Result := (HFileRes = INVALID_HANDLE_VALUE); //如果CreateFile返回失败 那么Result为真(即文件正在被使用)
+   if not Result then //如果CreateFile函数返回是成功
+   CloseHandle(HFileRes);   //那么关闭句柄
+end;
 function forceValidFileName(var FileName: string): Boolean;
 begin
   result:=false;

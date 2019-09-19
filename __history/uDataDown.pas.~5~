@@ -1,0 +1,108 @@
+unit uDataDown;
+
+interface
+uses
+  winapi.windows,sysutils,strutils;
+var
+  g:DWORD;
+  hLocalFile:HWND;
+procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
+//链接转换为本地文件路径
+function url2file(ServerName,ObjectName:string;ServerPort:DWORD):string;
+procedure myCloseHandle(wInet:DWORD);
+implementation
+uses
+  uData,uConfig;
+var
+  mWorkDir:string;
+procedure myCloseHandle(wInet:DWORD);
+begin
+  if(wInet<>uData.datas[idata-1].wRequest)then exit;
+  if(hLocalFile<>0)then begin
+    closeHandle(hLocalFile);
+    hLocalFile:=0;
+  end;
+end;
+procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
+var
+  localFileName,ServerName,ObjectName:string;
+  ServerPort:DWORD;
+  lpNumberOfBytesWritten:DWORD;
+  ret:BOOL;
+begin
+  if(wFile<>uData.datas[idata-1].wRequest)then exit;
+  try
+  if(uData.datas[idata-1].dataLen=0)then begin
+    ServerName:=uData.datas[idata-1].ServerName;
+    ObjectName:=uData.datas[idata-1].ObjectName;
+    ServerPort:=uData.datas[idata-1].ServerPort;
+    localFileName:=url2file(ServerName,ObjectName,ServerPort);
+    if(localFileName='')then exit;
+    if(fileexists(localFileName))then exit;
+    if(hLocalFile<>0)then exit;
+    hLocalFile:=CreateFile(pchar(localFileName),GENERIC_WRITE,FILE_SHARE_WRITE,nil,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0);
+    if(hLocalFile = INVALID_HANDLE_VALUE)then exit;
+    lpNumberOfBytesWritten:=0;
+    while(lpNumberOfBytesWritten<lpdwNumberOfBytesRead)do
+    begin
+      ret:=writeFile(hLocalFile,lpBuffer^,lpdwNumberOfBytesRead,lpNumberOfBytesWritten,0);
+      if(ret=false)then begin CloseHandle(hLocalFile);hLocalFile:=0;exit;end;
+    end;
+  end else begin
+    if(hLocalFile=0)then exit;
+  end;
+  while(lpNumberOfBytesWritten<lpdwNumberOfBytesRead)do
+  begin
+    ret:=writeFile(hLocalFile,lpBuffer^,lpdwNumberOfBytesRead,lpNumberOfBytesWritten,0);
+    if(ret=false)then begin CloseHandle(hLocalFile);hLocalFile:=0;exit;end;
+  end;
+  finally
+    uData.datas[idata-1].dataLen:=uData.datas[idata-1].dataLen+lpdwNumberOfBytesRead;
+  end;
+
+end;
+
+//链接转换为本地文件路径
+function url2file(ServerName,ObjectName:string;ServerPort:DWORD):string;
+var
+  p,i:integer;
+  s,dir,fullDir:string; //forcedirectories(mWorkDir);
+begin
+  s:=ObjectName;
+  fullDir:=mworkdir;  //程序工作目录；
+  result:='';
+  if(leftstr(s,1)<>'/')then exit;
+  if(rightstr(s,1)='/')then s:=s+'index.htm';
+  p:=pos('/',s);
+  if(p>0)then
+  dir:=leftstr(s,p-1);
+  if(dir='http:')then s:=rightstr(s,length(s)-7);  //去除http头部
+  if(dir='https:')then s:=rightstr(s,length(s)-8);  //去除https头部
+  if pos(':',s)>0 then s:=replacestr(s,':','/');
+
+  p:=pos('/',s);
+  while p>0 do begin
+    dir:=leftstr(s,p-1);
+    fullDir:=fullDir+'\'+dir;
+    if(not directoryexists(fullDir))then forcedirectories(fullDir);  //创建本地文件目录
+    s:=rightstr(s,length(s)-length(dir)-1);
+    p:=pos('/',s);
+  end;
+  p:=pos('?',s);  //排除链接里面?后面的内容；
+  if(p>0)then s:=replacestr(s,'?','$');
+  //if(p>0)then s:=leftstr(s,p-1);
+  //p:=pos('&',s);  //排除链接里面?后面的内容；
+  //if(p>0)then s:=replacestr(s,'&','-');
+  //p:=pos('=',s);  //排除链接里面?后面的内容；
+  //if(p>0)then s:=replacestr(s,'=','-');
+  //if(p>0)then s:=leftstr(s,p-1);
+  //p:=pos('#',s);  //排除链接里面?后面的内容；
+  //if(p>0)then s:=leftstr(s,p-1);
+  result:=fullDir+'\'+s;
+end;
+initialization
+  if not uConfig.isInit then uConfig.init();
+  mWorkDir:=uConfig.webCache;
+finalization
+
+end.

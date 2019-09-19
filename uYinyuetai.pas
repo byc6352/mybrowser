@@ -18,7 +18,7 @@ var
   function parseJsonFile(videoInfoFileName:string;var videoInfo:stVideoInfo):boolean;
 implementation
 uses
-  System.json,uDown,uConfig,uFuncs;
+  System.json,uConfig,uFuncs,uDM;
 //----------------------------------------------音乐台---------------------------------------
 function yinyuetai(url:string):boolean;
 const
@@ -110,7 +110,8 @@ var
   i:integer;
 begin
   url:=pchar(param);
-  localfilename:=uDown.downloadfile(url); //下载视频信息文件；
+  localfilename:=uFuncs.url2file(url); //下载视频信息文件；
+  if not dm.DownFileFromServer(url,localfilename)then exit;
   if(localfilename='')then exit;
   if not parseJsonFile(localfilename,videoInfo) then exit; //解析视频信息文件；
   msg:='视频名称：'+videoInfo.videoName+#13#10;
@@ -125,7 +126,8 @@ begin
     if(not uFuncs.IsValidFileName(filename))then uFuncs.forceValidFileName(filename);
     localFileName:=uConfig.yinyuetaiDir+'\'+filename+'['+videoInfo.qualityLevel[i]+']'+fileExt;
     if(not fileExists(localFileName))then
-      uDown.downloadtofile(videoInfo.videoUrl[i],localFileName); //下载视频文件；
+      dm.DownFileFromServer(videoInfo.videoUrl[i],localFileName);
+      //uDown.downloadtofile(videoInfo.videoUrl[i],localFileName); //下载视频文件；
   end;
   msg:='视频：'+videoInfo.videoName+'下载完毕!';
   PostMessage(mForm, WM_DOWN_FILE,2,videoInfo.videoCount);

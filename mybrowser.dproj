@@ -119,6 +119,8 @@
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="uYinyuetai.pas"/>
+        <DCCReference Include="uDataDown.pas"/>
+        <DCCReference Include="uSocketDown.pas"/>
         <None Include="ModelSupport_mybrowser\default.txaPackage"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>

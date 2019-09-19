@@ -52,6 +52,8 @@ var
   original_InternetConnectW:function(hInet: HINTERNET; lpszServerName: LPWSTR;
   nServerPort: INTERNET_PORT; lpszUsername: LPWSTR; lpszPassword: LPWSTR;
   dwService: DWORD; dwFlags: DWORD; dwContext: DWORD_PTR): HINTERNET; stdcall;
+  //InternetCloseHandle
+  original_InternetCloseHandle:function(hInet: HINTERNET): BOOL; stdcall;
 
 
   function replaced_InternetOpenUrlW(hInet: HINTERNET; lpszUrl: LPWSTR;lpszHeaders: LPWSTR; dwHeadersLength: DWORD; dwFlags: DWORD;dwContext: DWORD_PTR): HINTERNET; stdcall;
@@ -90,12 +92,20 @@ var
   function replaced_InternetConnectW(hInet: HINTERNET; lpszServerName: LPWSTR;
   nServerPort: INTERNET_PORT; lpszUsername: LPWSTR; lpszPassword: LPWSTR;
   dwService: DWORD; dwFlags: DWORD; dwContext: DWORD_PTR): HINTERNET; stdcall;
+  //InternetCloseHandle
+  function replaced_InternetCloseHandle(hInet: HINTERNET): BOOL; stdcall;
 
   procedure UnHookWebAPI;
   procedure HookWebAPI;
 implementation
 uses
   HookUtils;
+  //InternetCloseHandle
+function replaced_InternetCloseHandle(hInet: HINTERNET): BOOL; stdcall;
+begin
+  myCloseHandle(DWORD(hInet));
+  result:=original_InternetCloseHandle(hInet);
+end;
   //InternetConnectW
 function replaced_InternetConnectW(hInet: HINTERNET; lpszServerName: LPWSTR;
   nServerPort: INTERNET_PORT; lpszUsername: LPWSTR; lpszPassword: LPWSTR;
@@ -106,6 +116,7 @@ begin
   server.wConnect:=DWORD(result);
   server.ServerPort:=nServerPort;
   server.ServerName:=lpszServerName;
+  //InternetCloseHandle
 end;
 //HttpQueryInfoW
 function replaced_HttpQueryInfoW(hRequest: HINTERNET; dwInfoLevel: DWORD;
@@ -242,11 +253,11 @@ begin
   result:=original_InternetReadFile(hFile,lpBuffer,dwNumberOfBytesToRead,lpdwNumberOfBytesRead);
   if not result then exit;
   //这儿进行接收的数据处理
-  if((lpdwNumberOfBytesRead>0) and (lpdwNumberOfBytesRead<100))or(state=STAT_IDLE)or(uData.datas[iData-1].verb='POST')then begin
-    MessageBeep(100); //简单的响一声
-    uData.addData(DWORD(hFile),uData.DATA_TYPE_REPONSE,lpBuffer,lpdwNumberOfBytesRead);
-  end;
-
+  //if((lpdwNumberOfBytesRead>0) and (lpdwNumberOfBytesRead<100))or(state=STAT_IDLE)or(uData.datas[iData-1].verb='POST')then begin
+  //  MessageBeep(100); //简单的响一声
+  //  uData.addData(DWORD(hFile),uData.DATA_TYPE_REPONSE,lpBuffer,lpdwNumberOfBytesRead);
+  //end;
+  uData.SaveFile(DWORD(hFile),lpBuffer,lpdwNumberOfBytesRead);
 end;
   //InternetWriteFile
 function replaced_InternetWriteFile(hFile: HINTERNET; lpBuffer: Pointer;
@@ -322,6 +333,11 @@ begin
   begin
     @original_InternetConnectW := HookProcInModule('wininet.dll', 'InternetConnectW', @replaced_InternetConnectW);
   end;
+  //InternetCloseHandle
+  if not(Assigned(original_InternetCloseHandle)) then
+  begin
+    @original_InternetCloseHandle:= HookProcInModule('wininet.dll', 'InternetCloseHandle', @replaced_InternetCloseHandle);
+  end;
 end;
 {------------------------------------}
 {过程功能:取消HOOKAPI
@@ -355,6 +371,9 @@ begin
   //InternetConnectW
   if Assigned(original_InternetConnectW) then
     UnHook(@original_InternetConnectW);
+  //InternetCloseHandle
+  if Assigned(original_InternetCloseHandle) then
+    UnHook(@original_InternetCloseHandle);
 end;
 
 

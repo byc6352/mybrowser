@@ -1,0 +1,10 @@
+unit uDataDown;
+
+interface
+uses
+  windows;
+var
+  hLocalFile:HANDLE;
+implementation
+
+end.
