@@ -28,8 +28,8 @@ type
     mPageIdx:integer;
     function DownFileFromServer(const url,localFileName:string):boolean;
     function getLastPageID():string;
-    function InsertPageInfo(protocol,domain,port,url:string):string;
-    function InsertPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string):string;
+    //function InsertPageInfo(protocol,domain,port,url:string):string;
+    //function InsertPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string):string;
     //插入主页信息详细信息：
     //function addPageDetail(pageID,ServerName,ServerPort,ObjectName,verb,len,qHeader,rHeader,qData,rData:string;dtGet:tdatetime):boolean;
     function addPageDetail(pageID,idx:integer):boolean;
@@ -41,13 +41,10 @@ var
   dm: Tdm;
   iDown:integer;//下载序号
   bDownFiles,bPause:boolean;//下载工作线程变量；
-  hLocalFile:HWND;
+
   mForm:HWND;
 
-procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
 
-procedure myCloseHandle(wInet:DWORD);
-procedure myCloseFileHandle(var hFile:HWND);
 function GetLocalFileNameFromIECache(url:string;var CacheFileName:string):DWORD;
 function ThreadProc(param: LPVOID): DWORD; stdcall;
 function downloadfile(idx:integer):string;
@@ -119,49 +116,19 @@ try
   tPageDetail.fieldbyname('response_header').AsString:=uData.datas[idx].rHeader;
   tPageDetail.fieldbyname('request_data').AsString:=uData.datas[idx].qData;
   tPageDetail.fieldbyname('response_data').AsString:=uData.datas[idx].rData;
+  tPageDetail.fieldbyname('down_len').AsString:=inttostr(uData.datas[idx].dataLen);
   //Tblobfield(tPageDetail.fieldByName('ExexSql')).as
   tPageDetail.Post;
   result:=true;
-finally
-
+except
+    on E: Exception do
+    begin
+      Log(format('addPageDetail fail: %s.  raise by:%s.',[uData.datas[idx].ObjectName,e.Message]));
+      //raise Exception.CreateFmt('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]);
+    end;
 end;
 end;
 
-//插入主页信息详细信息：
-function TDM.InsertPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string):string;
-var
-  sql:string;
-  test1,test2:string;
-begin
-  result:='';
-  Q1.Close;
-  test1:='aaa';
-  test2:='bbbb';
-  sql:='insert into page_detail (page_ID,get_time,target_url,op_verb,data_len,request_header,response_header,request_data,response_data) values ('+pageID+',"'+dt+'","'+url+'","'+verb+'","'+len+'",:request_header,:response_header,"'+qData+'","'+rData+'")';
-  Q1.Parameters.CreateParameter('request_header',ftMemo,pdinput,length(qHeader),qHeader);
-  Q1.Parameters.CreateParameter('response_header',ftMemo,pdinput,length(rHeader),rHeader);
-  //Q1.Parameters.ParamByName('request_header').Value:=qHeader;
-  //Q1.Parameters.ParamByName('response_header').Value:=rHeader;
-  uLog.Log(sql);
-  Q1.SQL.Text:=sql;
-  Q1.ExecSQL;
-  result:='';
-  Q1.Close;
-end;
-//插入主页信息,,返回主页信息ID：
-function TDM.InsertPageInfo(protocol,domain,port,url:string):string;
-var
-  sql:string;
-begin
-  result:='';
-  Q1.Close;
-  sql:='insert into web_page (page_protocol,page_domain,page_port,page_url) values ("'+protocol+'","'+domain+'","'+port+'","'+url+'")';
-  uLog.Log(sql);
-  Q1.SQL.Text:=sql;
-  Q1.ExecSQL;
-  result:=getLastPageID;
-  Q1.Close;
-end;
 //查询pageID：
 function TDM.getLastPageID():string;
 var
@@ -203,58 +170,7 @@ end;
 
 
 //-------------------------------------------------------------------------------------------------
-procedure myCloseFileHandle(var hFile:HWND);
-begin
-  if(hFile=0)then exit;
-  try
-    closeHandle(hFile);
-  finally
-    hFile:=0;
-  end;
 
-end;
-procedure myCloseHandle(wInet:DWORD);
-begin
-  if(wInet<>uData.datas[idata-1].wRequest)then exit;
-  if(hLocalFile<>0)then begin
-    closeHandle(hLocalFile);
-    hLocalFile:=0;
-  end;
-end;
-procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
-var
-  localFileName,ServerName,ObjectName:string;
-  ServerPort:DWORD;
-  lpNumberOfBytesWritten:DWORD;
-  ret:BOOL;
-begin
-  if(wFile<>uData.datas[idata-1].wRequest)then exit;
-  try
-  if(uData.datas[idata-1].dataLen=0)then begin
-    ServerName:=uData.datas[idata-1].ServerName;
-    ObjectName:=uData.datas[idata-1].ObjectName;
-    ServerPort:=uData.datas[idata-1].ServerPort;
-    localFileName:=url2file(ServerName,ObjectName,ServerPort);
-    if(localFileName='')then exit;
-    if(fileexists(localFileName))then exit;
-    if(hLocalFile<>0)then myCloseFileHandle(hLocalFile);
-    uData.datas[idata-1].rData:=localFilename;
-    hLocalFile:=CreateFile(pchar(localFileName),GENERIC_WRITE,FILE_SHARE_WRITE,nil,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0);
-    if(hLocalFile = INVALID_HANDLE_VALUE)then exit;
-  end else begin
-    if(hLocalFile=0)then exit;
-  end;
-  lpNumberOfBytesWritten:=0;
-  while(lpNumberOfBytesWritten<lpdwNumberOfBytesRead)do
-  begin
-    ret:=writeFile(hLocalFile,lpBuffer^,lpdwNumberOfBytesRead,lpNumberOfBytesWritten,0);
-    if(ret=false)then begin CloseHandle(hLocalFile);hLocalFile:=0;exit;end;
-  end;
-  finally
-    uData.datas[idata-1].dataLen:=uData.datas[idata-1].dataLen+lpdwNumberOfBytesRead;
-  end;
-
-end;
 
 //------------------------------------------启动，暂停，停止区---------------------------------
 procedure stop();
@@ -368,33 +284,43 @@ function tdm.DownFileFromServer(const url,localFileName:string):boolean;
 var
   ss: tstrings;
   mm: TMemoryStream;
+  IdHTTP2:TIdHTTP;
+  IdSSLIOHandlerSocketOpenSSL2:TIdSSLIOHandlerSocketOpenSSL;
 function isUtf8():boolean;
 var
-  responseHeader,responseData:string;
+  responseInfo,responseData:string;
   //bUtf8,bText:boolean; //Content-Type: text
 begin
   result:=false;
-  responseHeader:=idhttp1.ResponseText;
-  responseHeader:=lowercase(responseHeader);
-  if(pos(lowercase('UTF-8'),responseHeader)>0)then begin result:=true;exit;end;
-  if(pos(lowercase('Content-Type: text'),responseHeader)>0)then begin
-    mm.Position:=0;
-    setLength(responseData,mm.Size);
-    move(mm.Memory^,responseData[1],mm.Size);
-    if(pos(lowercase('UTF-8'),responseData)>0)then begin result:=true;exit;end;
+  responseInfo:=idhttp1.Response.CharSet;
+  if(responseInfo<>'')then begin
+    responseInfo:=lowercase(responseInfo);
+    if(pos(lowercase('UTF-8'),responseInfo)>0)then begin result:=true;exit;end;
   end;
 end;
 begin
   result:=false;
-  mm:=TMemoryStream.Create;
-  idhttp1.ReadTimeout:= 15000;
-  idhttp1.ConnectTimeout := 15000;
-  if(pos('http://',url)>0)then idhttp1.IOHandler:=nil;
+  ss:=nil;
+  IdSSLIOHandlerSocketOpenSSL2:=nil;
   try
-    IdHTTP1.get(url,mm);
+    IdHTTP2 := TIdHTTP.create(nil);
+    mm:=TMemoryStream.Create;
+    if(pos(lowercase('https://'),lowercase(url))>0)then begin
+      IdSSLIOHandlerSocketOpenSSL2 := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      IdHTTP2.IOHandler := IdSSLIOHandlerSocketOpenSSL2;
+    end;
+    //IdHTTP2.IOHandler:=nil else IdHTTP2.IOHandler:=dm.IdSSLIOHandlerSocketOpenSSL1;
+    IdHTTP2.HandleRedirects := True; //[hoInProcessAuth,hoKeepOrigProtocol,hoForceEncodeParams]
+  try
+    //if(pos('http://',url)>0)then idhttp1.IOHandler:=nil else idhttp1.IOHandler:=dm.IdSSLIOHandlerSocketOpenSSL1;
+    //IdHTTP1.HandleRedirects := True; //[hoInProcessAuth,hoKeepOrigProtocol,hoForceEncodeParams]
+    IdHTTP2.ReadTimeout:= 30000;
+    IdHTTP2.ConnectTimeout := 30000;
+    IdHTTP2.get(url,mm);
+    mm.Position:=0;
+    //IdHTTP1
     if(isUtf8())then begin
       ss:=tstringlist.Create;
-      mm.Position:=0;
       ss.LoadFromStream(mm,TEncoding.UTF8);
       ss.SaveToFile(localFileName,Tencoding.UTF8);
     end else begin
@@ -402,14 +328,174 @@ begin
     end;
     result:=true;
   except
+    on E: Exception do
+    begin
+      Log(format('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]));
+      //raise Exception.CreateFmt('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]);
+    end;
+  end;
+  finally
+    if(assigned(IdHTTP2))then IdHTTP2.Free;
+    if(assigned(ss))then ss.Free;
+    if(assigned(mm))then mm.Free;
+    if(assigned(IdSSLIOHandlerSocketOpenSSL2))then IdSSLIOHandlerSocketOpenSSL2.Free;
+  end;
+end;
 
+
+{
+function tdm.DownFileFromServer(const url,localFileName:string):boolean;
+var
+  ss: tstrings;
+  mm: TMemoryStream;
+function isUtf8():boolean;
+var
+  responseInfo,responseData:string;
+  //bUtf8,bText:boolean; //Content-Type: text
+begin
+  result:=false;
+  responseInfo:=idhttp1.Response.CharSet;
+  if(responseInfo<>'')then begin
+    responseInfo:=lowercase(responseInfo);
+    if(pos(lowercase('UTF-8'),responseInfo)>0)then begin result:=true;exit;end;
+  end;
+end;
+begin
+  result:=false;
+  mm:=TMemoryStream.Create;
+
+  try
+    if(pos('http://',url)>0)then idhttp1.IOHandler:=nil else idhttp1.IOHandler:=dm.IdSSLIOHandlerSocketOpenSSL1;
+    IdHTTP1.HandleRedirects := True; //[hoInProcessAuth,hoKeepOrigProtocol,hoForceEncodeParams]
+    idhttp1.ReadTimeout:= 15000;
+    idhttp1.ConnectTimeout := 15000;
+    IdHTTP1.get(url,mm);
+    mm.Position:=0;
+    //IdHTTP1
+    if(isUtf8())then begin
+      ss:=tstringlist.Create;
+      ss.LoadFromStream(mm,TEncoding.UTF8);
+      ss.SaveToFile(localFileName,Tencoding.UTF8);
+    end else begin
+      mm.SaveToFile(localFileName);
+    end;
+    result:=true;
+  except
+    on E: Exception do
+    Log(format('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]));
+    //raise Exception.CreateFmt('IdHTTP1 down file fail: %s', [url]);
   end;
   if(assigned(ss))then ss.Free;
   mm.Free;
 end;
 
 
-{
+   on E: Exception do
+    begin
+      raise Exception.Create('下载文件'+aURL+'失败：'+e.Message);
+    end;
+
+  responseInfo:=idhttp1.Response.ContentType;
+  if(pos(lowercase('text'),responseInfo)>0)then begin
+    mm.Position:=0;
+    setLength(responseData,mm.Size);
+    move(mm.Memory^,responseData[1],mm.Size);
+    if(pos(lowercase('UTF-8'),responseData)>0)then begin result:=true;exit;end;
+  end;
+
+
+procedure myCloseFileHandle(var hFile:HWND);
+begin
+  if(hFile=0)then exit;
+  try
+    closeHandle(hFile);
+  finally
+    hFile:=0;
+  end;
+
+end;
+procedure myCloseHandle(wInet:DWORD);
+begin
+  if(wInet<>uData.datas[idata-1].wRequest)then exit;
+  if(hLocalFile<>0)then begin
+    closeHandle(hLocalFile);
+    hLocalFile:=0;
+  end;
+end;
+procedure SaveFile(wFile: DWORD; lpBuffer: Pointer;lpdwNumberOfBytesRead: DWORD);
+var
+  localFileName,ServerName,ObjectName:string;
+  ServerPort:DWORD;
+  lpNumberOfBytesWritten:DWORD;
+  ret:BOOL;
+begin
+  if(wFile<>uData.datas[idata-1].wRequest)then exit;
+  try
+  if(uData.datas[idata-1].dataLen=0)then begin
+    ServerName:=uData.datas[idata-1].ServerName;
+    ObjectName:=uData.datas[idata-1].ObjectName;
+    ServerPort:=uData.datas[idata-1].ServerPort;
+    localFileName:=url2file(ServerName,ObjectName,ServerPort);
+    if(localFileName='')then exit;
+    if(fileexists(localFileName))then exit;
+    if(hLocalFile<>0)then myCloseFileHandle(hLocalFile);
+    uData.datas[idata-1].rData:=localFilename;
+    hLocalFile:=CreateFile(pchar(localFileName),GENERIC_WRITE,FILE_SHARE_WRITE,nil,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0);
+    if(hLocalFile = INVALID_HANDLE_VALUE)then exit;
+  end else begin
+    if(hLocalFile=0)then exit;
+  end;
+  lpNumberOfBytesWritten:=0;
+  while(lpNumberOfBytesWritten<lpdwNumberOfBytesRead)do
+  begin
+    ret:=writeFile(hLocalFile,lpBuffer^,lpdwNumberOfBytesRead,lpNumberOfBytesWritten,0);
+    if(ret=false)then begin CloseHandle(hLocalFile);hLocalFile:=0;exit;end;
+  end;
+  finally
+    uData.datas[idata-1].dataLen:=uData.datas[idata-1].dataLen+lpdwNumberOfBytesRead;
+  end;
+
+end;
+
+
+
+
+//插入主页信息详细信息：
+function TDM.InsertPageDetail(pageID,dt,url,verb,len,qHeader,rHeader,qData,rData:string):string;
+var
+  sql:string;
+  test1,test2:string;
+begin
+  result:='';
+  Q1.Close;
+  test1:='aaa';
+  test2:='bbbb';
+  sql:='insert into page_detail (page_ID,get_time,target_url,op_verb,data_len,request_header,response_header,request_data,response_data) values ('+pageID+',"'+dt+'","'+url+'","'+verb+'","'+len+'",:request_header,:response_header,"'+qData+'","'+rData+'")';
+  Q1.Parameters.CreateParameter('request_header',ftMemo,pdinput,length(qHeader),qHeader);
+  Q1.Parameters.CreateParameter('response_header',ftMemo,pdinput,length(rHeader),rHeader);
+  //Q1.Parameters.ParamByName('request_header').Value:=qHeader;
+  //Q1.Parameters.ParamByName('response_header').Value:=rHeader;
+  uLog.Log(sql);
+  Q1.SQL.Text:=sql;
+  Q1.ExecSQL;
+  result:='';
+  Q1.Close;
+end;
+//插入主页信息,,返回主页信息ID：
+function TDM.InsertPageInfo(protocol,domain,port,url:string):string;
+var
+  sql:string;
+begin
+  result:='';
+  Q1.Close;
+  sql:='insert into web_page (page_protocol,page_domain,page_port,page_url) values ("'+protocol+'","'+domain+'","'+port+'","'+url+'")';
+  uLog.Log(sql);
+  Q1.SQL.Text:=sql;
+  Q1.ExecSQL;
+  result:=getLastPageID;
+  Q1.Close;
+end;
+
 //插入主页信息详细信息：
 function TDM.addPageDetail(pageID,ServerName,ServerPort,ObjectName,verb,len,qHeader,rHeader,qData,rData:string;dtGet:tdatetime):boolean;
 begin

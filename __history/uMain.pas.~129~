@@ -7,7 +7,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
   Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uConfig, Vcl.Menus,shellapi,uData,
   Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,uLog,
-  EmbeddedWB,uDataDown;
+  EmbeddedWB;
 
 type
   TfMain = class(TForm)
@@ -327,7 +327,7 @@ begin
   if MessageBox(0, '即将清空所有数据，请确认!', '警告', MB_OKCANCEL + MB_ICONWARNING) = ID_OK then  begin  //   MB_ICONQUESTION
     listData.Clear;
     memData.Lines.Clear;
-    uDataDown.clear();
+    udm.clear();
     uData.clear;
     bar1.Panels[0].Text:='数据已经清空！';
   end;
@@ -354,7 +354,14 @@ begin
   //uSocketDown.DownloadWithSocket('http://154.221.19.215/index.htm','c:\tmp\1.htm');
   //uSocketDown.DownloadWithSocket('154.221.19.215','/css/myIndex.css','c:\tmp\myIndex.js',80);
   //uSocketDown.DownloadWithSocket('img1.c.yinyuetai.com','/others/admin/161222/0/3efa00caa6322aa820e87e58272ccfe3_0x0.jpg','c:\tmp\0.jpg',80);
-  uSocketDown.DownloadWithSocket('s.c.yinyuetai.com','/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png',443);
+  //uSocketDown.DownloadWithSocket('s.c.yinyuetai.com','/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png',443);
+  //dm.DownFileFromServer('https://s.c.yinyuetai.com/v2/images/modules/topbar/new_topbar1.png','c:\tmp\new_topbar.png');
+  //http://154.221.19.215/index.htm
+  //dm.DownFileFromServer('http://he.yinyuetai.com/uploads/videos/common/BF2B016CD600E2E135C4EA15D39F0537.mp4','c:\tmp\BF2B016CD600E2E135C4EA15D39F0537.mp4');
+  //dm.DownFileFromServer('http://154.221.19.215/index.htm','c:\tmp\index.htm');
+
+  if(uFuncs.searchFile('get-h-mv-info-json=true&videoId=3295642','D:\works\app\web\cache\ext.yinyuetai.com\main',filename))then
+    memoInfo.Lines.Add(filename);
 end;
 
 procedure TfMain.cmbUrlChange(Sender: TObject);
@@ -393,7 +400,7 @@ procedure TfMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   //uDown.stop;
   uData.saveData;
-  uDataDown.stop;
+  uDM.stop;
 end;
 
 procedure TfMain.FormCreate(Sender: TObject);
@@ -410,7 +417,7 @@ begin
   cmburl.ItemIndex:=0;
   timer1.Enabled:=false;
   //uDown.start(uConfig.webCache,fmain.Handle);
-  uDataDown.start(uConfig.webCache,fmain.Handle);
+  udm.start(uConfig.webCache,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
 
@@ -445,21 +452,21 @@ begin
   doc:=web1.Document as IHTMLDocument2;
   getPageCode(doc,memcode.Lines);
   //doc.designMode:='On';
-  if(mPage<>doc.url)then begin
-    mPage:=doc.url;
-    mPort:=getPort(mPage);
-    msite:=doc.domain;
-    mProtocol:=doc.protocol;
-    if(mProtocol='HyperText Transfer Protocol with Privacy')then mProtocol:='https' else mProtocol:='http';
+  if(dm.mPage<>doc.url)then begin
+    dm.mPage:=doc.url;
+    dm.mPort:=getPort(dm.mPage);
+    dm.msite:=doc.domain;
+    dm.mProtocol:=doc.protocol;
+    if(dm.mProtocol='HyperText Transfer Protocol with Privacy')then dm.mProtocol:='https' else dm.mProtocol:='http';
 
-    cmburl.Text:=mpage;
-    fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+mpage+')';
+    cmburl.Text:=dm.mpage;
+    fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+dm.mpage+')';
 
     if(chkDownAll.Checked)then begin
       //uDown.addUrl(mPage);
-      mpageIdx:=dm.addPageInfo(mProtocol,msite,mPort,mpage);
+      dm.mpageIdx:=dm.updatePageInfo(dm.mProtocol,dm.msite,dm.mPort,dm.mpage);
     end;
-    yinyuetai(mPage);
+    yinyuetai(dm.mPage);
   end else begin   //刷新
 
   end;

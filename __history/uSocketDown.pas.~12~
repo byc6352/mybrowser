@@ -5,50 +5,12 @@ uses
   windows;
 
 //function DownloadWithSocket(const AUrl: ansiString): ansiString;overload;
-function DownloadWithSocket(const url,localFileName: ansiString): boolean;overload;
-function DownloadWithSocket(const ServerName,ObjectName,localFileName: ansiString;const ServerPort:DWORD): boolean;overload;
+function DownloadWithSocket(const ServerName,ObjectName,localFileName: ansiString;const ServerPort:DWORD): boolean;
 implementation
 uses
   winsock,sysutils,strutils,uLog,classes;
 
-function DownloadWithSocket(const url,localFileName: ansiString): boolean;overload;
-var
-  ServerName,ObjectName:ansiString;
-  ServerPort:DWORD;
 
-procedure ParseUrl();
-var
-  temp:ansiString;
-  i:integer;
-begin
- if(pos('http://',url)>0)then begin
-    ServerPort:=80;
-    temp:=rightStr(url,length(url)-7);
-  end;
-  if(pos('https://',url)>0)then begin
-    ServerPort:=443;
-    temp:=rightStr(url,length(url)-8);
-  end;
-  i:=pos('/',temp);
-  if(i<=0)then begin
-    ServerName:=temp;
-    ObjectName:='/';
-  end else begin
-    ServerName:=leftStr(temp,i-1);
-    ObjectName:=rightstr(temp,length(temp)-i+1);
-  end;
-  i:=pos(':',ServerName);
-  if(i>0)then begin
-    temp:=ServerName;
-    ServerName:=leftStr(temp,i-1);
-    temp:=rightStr(temp,length(temp)-i);
-    ServerPort:=strtoint(temp);
-  end;
-end;
-begin
-  ParseUrl();
-  result:=DownloadWithSocket(ServerName,ObjectName,localFileName,ServerPort);
-end;
 function DownloadWithSocket(const ServerName,ObjectName,localFileName: ansiString;const ServerPort:DWORD): boolean;
 const
   CRLF = #13#10;
@@ -134,7 +96,7 @@ const
     Socket := WinSock.socket(PF_INET, SOCK_STREAM, IPPROTO_IP);
     if Socket = INVALID_SOCKET then
       raise Exception.Create(SysErrorMessage(GetLastError));
-    Timeout := 10*60*1000;
+    Timeout := 60*1000;
     WinSock.setsockopt(Socket, SOL_SOCKET, SO_RCVTIMEO, @Timeout, SizeOf(TimeOut));
     HostEnt := gethostbyname(PansiChar(AHost));
     FillChar(Addr.sin_addr, SizeOf(Addr.sin_addr), 0);

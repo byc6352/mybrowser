@@ -354,7 +354,11 @@ begin
   //uSocketDown.DownloadWithSocket('http://154.221.19.215/index.htm','c:\tmp\1.htm');
   //uSocketDown.DownloadWithSocket('154.221.19.215','/css/myIndex.css','c:\tmp\myIndex.js',80);
   //uSocketDown.DownloadWithSocket('img1.c.yinyuetai.com','/others/admin/161222/0/3efa00caa6322aa820e87e58272ccfe3_0x0.jpg','c:\tmp\0.jpg',80);
-  uSocketDown.DownloadWithSocket('s.c.yinyuetai.com','/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png',443);
+  //uSocketDown.DownloadWithSocket('s.c.yinyuetai.com','/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png',443);
+  dm.DownFileFromServer('https://s.c.yinyuetai.com/v2/images/modules/topbar/new_topbar1.png','c:\tmp\new_topbar.png');
+  //http://154.221.19.215/index.htm
+  //dm.DownFileFromServer('http://he.yinyuetai.com/uploads/videos/common/BF2B016CD600E2E135C4EA15D39F0537.mp4','c:\tmp\BF2B016CD600E2E135C4EA15D39F0537.mp4');
+  dm.DownFileFromServer('http://154.221.19.215/index.htm','c:\tmp\index.htm');
 end;
 
 procedure TfMain.cmbUrlChange(Sender: TObject);
@@ -393,7 +397,7 @@ procedure TfMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   //uDown.stop;
   uData.saveData;
-  uDataDown.stop;
+  uDM.stop;
 end;
 
 procedure TfMain.FormCreate(Sender: TObject);

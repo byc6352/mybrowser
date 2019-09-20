@@ -24,7 +24,7 @@ type
 
   public
     { Public declarations }
-    mPage,mSite,mProtocol,mPort:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+    mPage,mDomain,mProtocol,mPort,mTitle,mCharSet,mCookie:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
     mPageIdx:integer;
     function DownFileFromServer(const url,localFileName:string):boolean;
     function getLastPageID():string;
@@ -33,8 +33,8 @@ type
     //插入主页信息详细信息：
     //function addPageDetail(pageID,ServerName,ServerPort,ObjectName,verb,len,qHeader,rHeader,qData,rData:string;dtGet:tdatetime):boolean;
     function addPageDetail(pageID,idx:integer):boolean;
-    function addPageInfo(protocol,domain,port,url:string):integer;
-    function UpdatePageInfo(protocol,domain,port,url:string):integer;
+    function addPageInfo(url:string):integer;
+    function UpdatePageInfo():integer;
   end;
 
 var
@@ -65,32 +65,35 @@ uses
 var
   mWorkDir:string;
 //添加主页信息,,返回主页信息ID：
-function TDM.UpdatePageInfo(protocol,domain,port,url:string):integer;
+function TDM.UpdatePageInfo():integer;
 begin
   if(dm.tPage.Active=false)then begin
     dm.tPage.Open;
     tPageDetail.Open;
   end;
-  dm.tPage.Last;
+  //dm.tPage.Last;
   dm.tPage.Edit;
-  tPage.fieldbyname('page_protocol').AsString:=protocol;
-  tPage.fieldbyname('page_domain').AsString:=domain;      //strtodatetime(dt)
-  tPage.fieldbyname('page_port').AsString:=port;
-  tPage.fieldbyname('page_url').AsString:=url;
+  tPage.fieldbyname('page_protocol').AsString:=mprotocol;
+  tPage.fieldbyname('page_domain').AsString:=mDomain;      //strtodatetime(dt)
+  tPage.fieldbyname('page_port').AsString:=mport;
+  tPage.fieldbyname('page_url').AsString:=mPage;
+  tPage.fieldbyname('page_title').AsString:=mTitle;
+  tPage.fieldbyname('page_charset').AsString:=mCharSet;
+  tPage.fieldbyname('page_cookie').AsString:=mCookie;
   tPage.Post;
   result:=tPage.fieldbyname('ID').AsInteger;
 end;
 //添加主页信息,,返回主页信息ID：
-function TDM.addPageInfo(protocol,domain,port,url:string):integer;
+function TDM.addPageInfo(url:string):integer;
 begin
   if(dm.tPage.Active=false)then begin
     dm.tPage.Open;
     tPageDetail.Open;
   end;
   dm.tPage.Append;
-  tPage.fieldbyname('page_protocol').AsString:=protocol;
-  tPage.fieldbyname('page_domain').AsString:=domain;      //strtodatetime(dt)
-  tPage.fieldbyname('page_port').AsString:=port;
+  tPage.fieldbyname('page_protocol').AsString:='';
+  tPage.fieldbyname('page_domain').AsString:='';      //strtodatetime(dt)
+  tPage.fieldbyname('page_port').AsString:='';
   tPage.fieldbyname('page_url').AsString:=url;
   tPage.Post;
   result:=tPage.fieldbyname('ID').AsInteger;
@@ -120,8 +123,13 @@ try
   //Tblobfield(tPageDetail.fieldByName('ExexSql')).as
   tPageDetail.Post;
   result:=true;
-finally
-
+  //application.
+except
+    on E: Exception do
+    begin
+      Log(format('addPageDetail fail: %s.  raise by:%s.',[uData.datas[idx].ObjectName,e.Message]));
+      //raise Exception.CreateFmt('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]);
+    end;
 end;
 end;
 
@@ -212,7 +220,7 @@ begin
     downloadfile(iDown);
     dm.addPageDetail(dm.mPageIdx,iDown);
     PostMessage(mForm, WM_DOWN_FILE,0,iDown);
-
+    //sleep(1000);
     iDown:=iDown+1;
   end;
   PostMessage(mForm, WM_DOWN_FILE,1,iDown);
@@ -248,10 +256,10 @@ begin
       //result:='';
     end;
   end else begin //remote file
-    if(dm.DownFileFromServer(url,localFileName))then begin
-      result:=localFileName;
-      uData.datas[idx].rData:=localFileName;
-    end;
+    //if(dm.DownFileFromServer(url,localFileName))then begin
+    //  result:=localFileName;
+   //   uData.datas[idx].rData:=localFileName;
+   // end;
   end;
 end;
 
@@ -280,6 +288,70 @@ function tdm.DownFileFromServer(const url,localFileName:string):boolean;
 var
   ss: tstrings;
   mm: TMemoryStream;
+  IdHTTP2:TIdHTTP;
+  IdSSLIOHandlerSocketOpenSSL2:TIdSSLIOHandlerSocketOpenSSL;
+function isUtf8():boolean;
+var
+  responseInfo,responseData:string;
+  //bUtf8,bText:boolean; //Content-Type: text
+begin
+  result:=false;
+  responseInfo:=idhttp1.Response.CharSet;
+  if(responseInfo<>'')then begin
+    responseInfo:=lowercase(responseInfo);
+    if(pos(lowercase('UTF-8'),responseInfo)>0)then begin result:=true;exit;end;
+  end;
+end;
+begin
+  result:=false;
+  ss:=nil;
+  IdSSLIOHandlerSocketOpenSSL2:=nil;
+  try
+    IdHTTP2 := TIdHTTP.create(nil);
+    mm:=TMemoryStream.Create;
+    if(pos(lowercase('https://'),lowercase(url))>0)then begin
+      IdSSLIOHandlerSocketOpenSSL2 := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+      IdHTTP2.IOHandler := IdSSLIOHandlerSocketOpenSSL2;
+    end;
+    //IdHTTP2.IOHandler:=nil else IdHTTP2.IOHandler:=dm.IdSSLIOHandlerSocketOpenSSL1;
+    IdHTTP2.HandleRedirects := True; //[hoInProcessAuth,hoKeepOrigProtocol,hoForceEncodeParams]
+  try
+    //if(pos('http://',url)>0)then idhttp1.IOHandler:=nil else idhttp1.IOHandler:=dm.IdSSLIOHandlerSocketOpenSSL1;
+    //IdHTTP1.HandleRedirects := True; //[hoInProcessAuth,hoKeepOrigProtocol,hoForceEncodeParams]
+    IdHTTP2.ReadTimeout:= 30000;
+    IdHTTP2.ConnectTimeout := 30000;
+    IdHTTP2.get(url,mm);
+    mm.Position:=0;
+    //IdHTTP1
+    if(isUtf8())then begin
+      ss:=tstringlist.Create;
+      ss.LoadFromStream(mm,TEncoding.UTF8);
+      ss.SaveToFile(localFileName,Tencoding.UTF8);
+    end else begin
+      mm.SaveToFile(localFileName);
+    end;
+    result:=true;
+  except
+    on E: Exception do
+    begin
+      Log(format('IdHTTP2 down file fail: %s.raise by:%s.',[url,e.Message]));
+      //raise Exception.CreateFmt('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]);
+    end;
+  end;
+  finally
+    if(assigned(IdHTTP2))then IdHTTP2.Free;
+    if(assigned(ss))then ss.Free;
+    if(assigned(mm))then mm.Free;
+    if(assigned(IdSSLIOHandlerSocketOpenSSL2))then IdSSLIOHandlerSocketOpenSSL2.Free;
+  end;
+end;
+
+
+{
+function tdm.DownFileFromServer(const url,localFileName:string):boolean;
+var
+  ss: tstrings;
+  mm: TMemoryStream;
 function isUtf8():boolean;
 var
   responseInfo,responseData:string;
@@ -295,12 +367,15 @@ end;
 begin
   result:=false;
   mm:=TMemoryStream.Create;
-  idhttp1.ReadTimeout:= 15000;
-  idhttp1.ConnectTimeout := 15000;
-  if(pos('http://',url)>0)then idhttp1.IOHandler:=nil;
+
   try
+    if(pos('http://',url)>0)then idhttp1.IOHandler:=nil else idhttp1.IOHandler:=dm.IdSSLIOHandlerSocketOpenSSL1;
+    IdHTTP1.HandleRedirects := True; //[hoInProcessAuth,hoKeepOrigProtocol,hoForceEncodeParams]
+    idhttp1.ReadTimeout:= 15000;
+    idhttp1.ConnectTimeout := 15000;
     IdHTTP1.get(url,mm);
     mm.Position:=0;
+    //IdHTTP1
     if(isUtf8())then begin
       ss:=tstringlist.Create;
       ss.LoadFromStream(mm,TEncoding.UTF8);
@@ -310,14 +385,19 @@ begin
     end;
     result:=true;
   except
-    raise Exception.CreateFmt('IdHTTP1 down file fail: %s', [url]);
+    on E: Exception do
+    Log(format('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]));
+    //raise Exception.CreateFmt('IdHTTP1 down file fail: %s', [url]);
   end;
   if(assigned(ss))then ss.Free;
   mm.Free;
 end;
 
 
-{
+   on E: Exception do
+    begin
+      raise Exception.Create('下载文件'+aURL+'失败：'+e.Message);
+    end;
 
   responseInfo:=idhttp1.Response.ContentType;
   if(pos(lowercase('text'),responseInfo)>0)then begin

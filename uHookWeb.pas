@@ -4,8 +4,8 @@ interface
 uses windows,WinSock2,Messages,WININET,uFuncs,uConfig,uCoding,uData;
 const
   WM_CAP_WORK = WM_USER+1001;
-  STAT_BROWSING=0;
-  STAT_IDLE=1;
+  STAT_BROWSING=1;
+  STAT_IDLE=0;
 
 var
   state:integer; //浏览器状态：STAT_BROWSING正在加载页面；STAT_IDLE空闲；

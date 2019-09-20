@@ -355,10 +355,16 @@ begin
   //uSocketDown.DownloadWithSocket('154.221.19.215','/css/myIndex.css','c:\tmp\myIndex.js',80);
   //uSocketDown.DownloadWithSocket('img1.c.yinyuetai.com','/others/admin/161222/0/3efa00caa6322aa820e87e58272ccfe3_0x0.jpg','c:\tmp\0.jpg',80);
   //uSocketDown.DownloadWithSocket('s.c.yinyuetai.com','/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png',443);
-  dm.DownFileFromServer('https://s.c.yinyuetai.com/v2/images/modules/topbar/new_topbar1.png','c:\tmp\new_topbar.png');
+  //dm.DownFileFromServer('https://s.c.yinyuetai.com/v2/images/modules/topbar/new_topbar1.png','c:\tmp\new_topbar.png');
   //http://154.221.19.215/index.htm
   //dm.DownFileFromServer('http://he.yinyuetai.com/uploads/videos/common/BF2B016CD600E2E135C4EA15D39F0537.mp4','c:\tmp\BF2B016CD600E2E135C4EA15D39F0537.mp4');
-  dm.DownFileFromServer('http://154.221.19.215/index.htm','c:\tmp\index.htm');
+  //dm.DownFileFromServer('http://154.221.19.215/index.htm','c:\tmp\index.htm');
+  //DownloadWithSocket('ext.yinyuetai.com','/main/get-h-mv-info?json=true&videoId=3395476','c:\tmp\1.json',80);
+  //if(uFuncs.searchFile('get-h-mv-info-json=true&videoId=3395476','D:\works\app\web\cache\ext.yinyuetai.com\main',filename))then
+  //memoInfo.Lines.Add(filename); D:\works\app\web\cache\ext.yinyuetai.com\main\get-h-mv-info-json=true&videoId=3295642
+  fileName:='D:\works\app\web\cache\ext.yinyuetai.com\main\get-h-mv-info-json=true&videoId=3295642';
+  if(uFuncs.searchFile(extractfileName(fileName),exTractFileDir(FileName),filename))then
+  memoInfo.Lines.Add(filename);
 end;
 
 procedure TfMain.cmbUrlChange(Sender: TObject);
@@ -428,11 +434,10 @@ procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
 var
   aUrl:string;
 begin
-  //uDown.pause();
-  uHookweb.state:=STAT_BROWSING;
-  timer1.Enabled:=false;
   aUrl:=url;
-  dm.mpageIdx:=dm.addPageInfo('','','',aUrl);
+  uHookweb.state:=STAT_BROWSING;
+  uDm.pause;
+  timer1.Enabled:=false;
   bar1.Panels[0].Text:='正在加载页面...';
 end;
 
@@ -452,16 +457,26 @@ begin
   if(dm.mPage<>doc.url)then begin
     dm.mPage:=doc.url;
     dm.mPort:=getPort(dm.mPage);
-    dm.msite:=doc.domain;
+    dm.mDomain:=doc.domain;
     dm.mProtocol:=doc.protocol;
-    if(dm.mProtocol='HyperText Transfer Protocol with Privacy')then dm.mProtocol:='https' else dm.mProtocol:='http';
-
+    if(dm.mProtocol='HyperText Transfer Protocol with Privacy')then begin
+      dm.mProtocol:='https';
+      if(dm.mPort='')then dm.mPort:='443';
+    end else begin
+      dm.mProtocol:='http';
+      if(dm.mPort='')then dm.mPort:='80';
+    end;
+    dm.mTitle:=doc.title;
+    dm.mCharSet:=doc.charset;
+    dm.mCookie:=doc.cookie;
+    //doc.
     cmburl.Text:=dm.mpage;
     fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+dm.mpage+')';
 
     if(chkDownAll.Checked)then begin
       //uDown.addUrl(mPage);
-      dm.mpageIdx:=dm.updatePageInfo(dm.mProtocol,dm.msite,dm.mPort,dm.mpage);
+      dm.mpageIdx:=dm.AddPageInfo();
+      uDM.start();
     end;
     yinyuetai(dm.mPage);
   end else begin   //刷新

@@ -47,7 +47,7 @@ begin
 end;
 begin
   ParseUrl();
-  result:=DownloadWithSocket(ServerName,ObjectName,localFileName,ServerPort);
+  DownloadWithSocket(ServerName,ObjectName,localFileName,ServerPort);
 end;
 function DownloadWithSocket(const ServerName,ObjectName,localFileName: ansiString;const ServerPort:DWORD): boolean;
 const
@@ -134,7 +134,7 @@ const
     Socket := WinSock.socket(PF_INET, SOCK_STREAM, IPPROTO_IP);
     if Socket = INVALID_SOCKET then
       raise Exception.Create(SysErrorMessage(GetLastError));
-    Timeout := 10*60*1000;
+    Timeout := 60*1000;
     WinSock.setsockopt(Socket, SOL_SOCKET, SO_RCVTIMEO, @Timeout, SizeOf(TimeOut));
     HostEnt := gethostbyname(PansiChar(AHost));
     FillChar(Addr.sin_addr, SizeOf(Addr.sin_addr), 0);

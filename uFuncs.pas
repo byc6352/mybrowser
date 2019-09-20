@@ -26,7 +26,31 @@ function url2file(url:string):string;overload;
 function utf8String(const s:ansiString):string;
 //获取主站地址；
 function getPort(url:string):string;
+function searchFile(const str,dir:string;var resultName:string):boolean;
 implementation
+uses
+  uLog;
+function searchFile(const str,dir:string;var resultName:string):boolean;
+var
+  wfd:WIN32_FIND_DATA;
+  fileName:string;
+  hFile:cardinal;
+begin
+  result:=false;
+try
+  fileName:=dir+'\'+str+'*';
+  hFile:=findFirstFile(pchar(fileName),wfd);
+  if(hFile<>INVALID_HANDLE_VALUE)then begin
+    fileName:=wfd.cFileName;
+    resultName:=dir+'\'+fileName;
+    result:=true;
+    Log('searchFile:suc:'+fileName);
+  end;
+finally
+  Log('searchFile:'+fileName);
+  if(hFile<>INVALID_HANDLE_VALUE)then windows.findClose(hFile);
+end;
+end;
 //链接转换为本地文件路径
 function url2file(url:string):string;
 var

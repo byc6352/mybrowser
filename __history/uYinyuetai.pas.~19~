@@ -18,7 +18,7 @@ var
   function parseJsonFile(videoInfoFileName:string;var videoInfo:stVideoInfo):boolean;
 implementation
 uses
-  System.json,uDown,uConfig,uFuncs;
+  System.json,uConfig,uFuncs,uDM;
 //----------------------------------------------音乐台---------------------------------------
 function yinyuetai(url:string):boolean;
 const
@@ -55,6 +55,8 @@ begin
   jsonObject := nil;
   result:=false;
   videoInfo.videoCount:=0;
+  if not fileexists(videoInfoFileName) then exit;
+
   try
     ss:=tstringlist.Create;
     ss.LoadFromFile(videoInfoFileName,TEncoding.UTF8);
@@ -96,20 +98,20 @@ begin
    end;
    result:=true;
   finally
-    ss.Free;
-    if(assigned(jsonObject))then
-      jsonObject.Free;
+    if(assigned(ss))then ss.Free;
+    if(assigned(jsonObject))then jsonObject.Free;
   end;
 end;
 //------------------------------------------下载线程区------------------------------------------
 function ThreadProc(param: LPVOID): DWORD; stdcall;
 var
-  url,localFileName,fileExt:string;
+  url,localFileName,fileExt,filename:string;
   videoInfo:stVideoInfo;
   i:integer;
 begin
   url:=pchar(param);
-  localfilename:=uDown.downloadfile(url); //下载视频信息文件；
+  localfilename:=uFuncs.url2file(url); //下载视频信息文件；
+  if not dm.DownFileFromServer(url,localfilename)then exit;
   if(localfilename='')then exit;
   if not parseJsonFile(localfilename,videoInfo) then exit; //解析视频信息文件；
   msg:='视频名称：'+videoInfo.videoName+#13#10;
@@ -120,12 +122,15 @@ begin
   PostMessage(mForm, WM_DOWN_FILE,2,videoInfo.videoCount);
   for i:=0 to videoInfo.videoCount-1  do begin
     fileExt:=rightstr(videoInfo.videoUrl[i],4);
-    localFileName:=uConfig.yinyuetaiDir+'\'+videoInfo.videoName+'['+videoInfo.qualityLevel[i]+']'+fileExt;
-    if(not uFuncs.IsValidFileName(localFileName))then uFuncs.forceValidFileName(localFileName);
+    filename:=videoInfo.videoName;
+    if(not uFuncs.IsValidFileName(filename))then uFuncs.forceValidFileName(filename);
+    localFileName:=uConfig.yinyuetaiDir+'\'+filename+'['+videoInfo.qualityLevel[i]+']'+fileExt;
     if(not fileExists(localFileName))then
-      uDown.downloadtofile(videoInfo.videoUrl[i],localFileName); //下载视频文件；
+      dm.DownFileFromServer(videoInfo.videoUrl[i],localFileName);
+      //uDown.downloadtofile(videoInfo.videoUrl[i],localFileName); //下载视频文件；
   end;
   msg:='视频：'+videoInfo.videoName+'下载完毕!';
+  PostMessage(mForm, WM_DOWN_FILE,2,videoInfo.videoCount);
   Result := 0;
 end;
 procedure downloadThread(videoInfoUrl:string);

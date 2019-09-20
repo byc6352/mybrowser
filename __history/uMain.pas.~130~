@@ -355,9 +355,13 @@ begin
   //uSocketDown.DownloadWithSocket('154.221.19.215','/css/myIndex.css','c:\tmp\myIndex.js',80);
   //uSocketDown.DownloadWithSocket('img1.c.yinyuetai.com','/others/admin/161222/0/3efa00caa6322aa820e87e58272ccfe3_0x0.jpg','c:\tmp\0.jpg',80);
   //uSocketDown.DownloadWithSocket('s.c.yinyuetai.com','/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png',443);
-  //dm.DownFileFromServer('https://s.c.yinyuetai.com/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png');
+  //dm.DownFileFromServer('https://s.c.yinyuetai.com/v2/images/modules/topbar/new_topbar1.png','c:\tmp\new_topbar.png');
   //http://154.221.19.215/index.htm
-  dm.DownFileFromServer('http://154.221.19.215/index.htm','c:\tmp\index.htm');
+  //dm.DownFileFromServer('http://he.yinyuetai.com/uploads/videos/common/BF2B016CD600E2E135C4EA15D39F0537.mp4','c:\tmp\BF2B016CD600E2E135C4EA15D39F0537.mp4');
+  //dm.DownFileFromServer('http://154.221.19.215/index.htm','c:\tmp\index.htm');
+
+  if(uFuncs.searchFile('get-h-mv-info-json=true&videoId=3295642','D:\works\app\web\cache\ext.yinyuetai.com\main',filename))then
+    memoInfo.Lines.Add(filename);
 end;
 
 procedure TfMain.cmbUrlChange(Sender: TObject);
@@ -453,8 +457,15 @@ begin
     dm.mPort:=getPort(dm.mPage);
     dm.msite:=doc.domain;
     dm.mProtocol:=doc.protocol;
-    if(dm.mProtocol='HyperText Transfer Protocol with Privacy')then dm.mProtocol:='https' else dm.mProtocol:='http';
-
+    if(dm.mProtocol='HyperText Transfer Protocol with Privacy')then begin
+      dm.mProtocol:='https';
+      if(dm.mPort='')then dm.mPort:=443;
+    end else begin
+      dm.mProtocol:='http';
+      if(dm.mPort='')then dm.mPort:=80;
+    end;
+    dm.m
+    //doc.
     cmburl.Text:=dm.mpage;
     fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+dm.mpage+')';
 

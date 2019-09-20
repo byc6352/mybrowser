@@ -24,7 +24,7 @@ type
 
   public
     { Public declarations }
-    mPage,mSite,mProtocol,mPort:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+    mPage,mDomain,mProtocol,mPort,mTitle,mCharSet,mCookie:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
     mPageIdx:integer;
     function DownFileFromServer(const url,localFileName:string):boolean;
     function getLastPageID():string;
@@ -33,8 +33,9 @@ type
     //插入主页信息详细信息：
     //function addPageDetail(pageID,ServerName,ServerPort,ObjectName,verb,len,qHeader,rHeader,qData,rData:string;dtGet:tdatetime):boolean;
     function addPageDetail(pageID,idx:integer):boolean;
-    function addPageInfo(protocol,domain,port,url:string):integer;
-    function UpdatePageInfo(protocol,domain,port,url:string):integer;
+     //添加主页信息,,返回主页信息ID：
+    function addPageInfo():integer;
+    function UpdatePageInfo():integer;
   end;
 
 var
@@ -64,46 +65,45 @@ uses
   uData,winInet;
 var
   mWorkDir:string;
-//添加主页信息,,返回主页信息ID：
-function TDM.UpdatePageInfo(protocol,domain,port,url:string):integer;
+  //添加主页信息,,返回主页信息ID：
+function TDM.addPageInfo():integer;
 begin
-  if(dm.tPage.Active=false)then begin
-    dm.tPage.Open;
-    tPageDetail.Open;
-  end;
-  dm.tPage.Last;
-  dm.tPage.Edit;
-  tPage.fieldbyname('page_protocol').AsString:=protocol;
-  tPage.fieldbyname('page_domain').AsString:=domain;      //strtodatetime(dt)
-  tPage.fieldbyname('page_port').AsString:=port;
-  tPage.fieldbyname('page_url').AsString:=url;
-  tPage.Post;
-  result:=tPage.fieldbyname('ID').AsInteger;
-end;
-//添加主页信息,,返回主页信息ID：
-function TDM.addPageInfo(protocol,domain,port,url:string):integer;
-begin
-  if(dm.tPage.Active=false)then begin
-    dm.tPage.Open;
-    tPageDetail.Open;
-  end;
   dm.tPage.Append;
-  tPage.fieldbyname('page_protocol').AsString:=protocol;
-  tPage.fieldbyname('page_domain').AsString:=domain;      //strtodatetime(dt)
-  tPage.fieldbyname('page_port').AsString:=port;
-  tPage.fieldbyname('page_url').AsString:=url;
+  tPage.fieldbyname('page_protocol').AsString:=mprotocol;
+  tPage.fieldbyname('page_domain').AsString:=mDomain;      //strtodatetime(dt)
+  tPage.fieldbyname('page_port').AsString:=mport;
+  tPage.fieldbyname('page_url').AsString:=mPage;
+  tPage.fieldbyname('page_title').AsString:=mTitle;
+  tPage.fieldbyname('page_charset').AsString:=mCharSet;
+  tPage.fieldbyname('page_cookie').AsString:=mCookie;
   tPage.Post;
   result:=tPage.fieldbyname('ID').AsInteger;
 end;
+//添加主页信息,,返回主页信息ID：
+function TDM.UpdatePageInfo():integer;
+begin
+  if(dm.tPage.Active=false)then begin
+    dm.tPage.Open;
+    tPageDetail.Open;
+  end;
+  //dm.tPage.Last;
+  dm.tPage.Edit;
+  tPage.fieldbyname('page_protocol').AsString:=mprotocol;
+  tPage.fieldbyname('page_domain').AsString:=mDomain;      //strtodatetime(dt)
+  tPage.fieldbyname('page_port').AsString:=mport;
+  tPage.fieldbyname('page_url').AsString:=mPage;
+  tPage.fieldbyname('page_title').AsString:=mTitle;
+  tPage.fieldbyname('page_charset').AsString:=mCharSet;
+  tPage.fieldbyname('page_cookie').AsString:=mCookie;
+  tPage.Post;
+  result:=tPage.fieldbyname('ID').AsInteger;
+end;
+
 //插入主页信息详细信息：
 function TDM.addPageDetail(pageID,idx:integer):boolean;
 begin
   result:=false;
 try
-  if(dm.tPageDetail.Active=false)then begin
-    dm.tPage.Open;
-   dm.tPageDetail.Open;
-  end;
   dm.tPageDetail.Append;
   tPageDetail.fieldbyname('page_ID').AsInteger:=pageID;
   tPageDetail.fieldbyname('get_time').AsDateTime:=uData.datas[idx].dt;      //
@@ -120,8 +120,13 @@ try
   //Tblobfield(tPageDetail.fieldByName('ExexSql')).as
   tPageDetail.Post;
   result:=true;
-finally
-
+  //application.
+except
+    on E: Exception do
+    begin
+      Log(format('addPageDetail fail: %s.  raise by:%s.',[uData.datas[idx].ObjectName,e.Message]));
+      //raise Exception.CreateFmt('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]);
+    end;
 end;
 end;
 
@@ -212,7 +217,7 @@ begin
     downloadfile(iDown);
     dm.addPageDetail(dm.mPageIdx,iDown);
     PostMessage(mForm, WM_DOWN_FILE,0,iDown);
-
+    //sleep(1000);
     iDown:=iDown+1;
   end;
   PostMessage(mForm, WM_DOWN_FILE,1,iDown);
@@ -248,10 +253,10 @@ begin
       //result:='';
     end;
   end else begin //remote file
-    if(dm.DownFileFromServer(url,localFileName))then begin
-      result:=localFileName;
-      uData.datas[idx].rData:=localFileName;
-    end;
+    //if(dm.DownFileFromServer(url,localFileName))then begin
+    //  result:=localFileName;
+   //   uData.datas[idx].rData:=localFileName;
+   // end;
   end;
 end;
 
@@ -310,8 +315,8 @@ begin
   try
     //if(pos('http://',url)>0)then idhttp1.IOHandler:=nil else idhttp1.IOHandler:=dm.IdSSLIOHandlerSocketOpenSSL1;
     //IdHTTP1.HandleRedirects := True; //[hoInProcessAuth,hoKeepOrigProtocol,hoForceEncodeParams]
-    IdHTTP2.ReadTimeout:= 15000;
-    IdHTTP2.ConnectTimeout := 15000;
+    IdHTTP2.ReadTimeout:= 30000;
+    IdHTTP2.ConnectTimeout := 30000;
     IdHTTP2.get(url,mm);
     mm.Position:=0;
     //IdHTTP1
@@ -325,8 +330,10 @@ begin
     result:=true;
   except
     on E: Exception do
-    Log(format('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]));
-    //raise Exception.CreateFmt('IdHTTP1 down file fail: %s', [url]);
+    begin
+      Log(format('IdHTTP2 down file fail: %s.raise by:%s.',[url,e.Message]));
+      //raise Exception.CreateFmt('IdHTTP1 down file fail: %s.raise by:%s.',[url,e.Message]);
+    end;
   end;
   finally
     if(assigned(IdHTTP2))then IdHTTP2.Free;
@@ -338,6 +345,25 @@ end;
 
 
 {
+//添加主页信息,,返回主页信息ID：
+function TDM.addPageInfo(url:string):integer;
+begin
+  if(dm.tPage.Active=false)then begin
+    dm.tPage.Open;
+    tPageDetail.Open;
+  end;
+  dm.tPage.Append;
+  tPage.fieldbyname('page_protocol').AsString:='';
+  tPage.fieldbyname('page_domain').AsString:='';      //strtodatetime(dt)
+  tPage.fieldbyname('page_port').AsString:='';
+  tPage.fieldbyname('page_url').AsString:=url;
+  tPage.Post;
+  result:=tPage.fieldbyname('ID').AsInteger;
+end;
+
+
+
+
 function tdm.DownFileFromServer(const url,localFileName:string):boolean;
 var
   ss: tstrings;

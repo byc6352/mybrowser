@@ -18,7 +18,7 @@ var
   function parseJsonFile(videoInfoFileName:string;var videoInfo:stVideoInfo):boolean;
 implementation
 uses
-  System.json,uConfig,uFuncs,uDM;
+  System.json,uConfig,uFuncs,uDM,uLog,uSocketDown;
 //----------------------------------------------音乐台---------------------------------------
 function yinyuetai(url:string):boolean;
 const
@@ -68,8 +68,8 @@ begin
       if(i>0)then temp:=MidStr(temp,i+1,j-i-1);
     end;
     jsonObject :=TJSONObject.ParseJSONValue(TEncoding.UTF8.GetBytes(temp), 0) as TJSONObject;
-    if(jsonObject=nil)then exit;
-    if jsonObject.Count = 0 then exit;
+    if(jsonObject=nil)then begin Log('jsonObject=nil');exit;end;
+    if jsonObject.Count = 0 then  begin Log('jsonObject.Count = 0');exit;end;
     subJsonObject := TJSONObject(jsonObject.GetValue('videoInfo'));
     if(subJsonObject=nil) or (subJsonObject.Count=0)then exit;
     subJsonObject := TJSONObject(subJsonObject.GetValue('coreVideoInfo'));
@@ -111,9 +111,10 @@ var
 begin
   url:=pchar(param);
   localfilename:=uFuncs.url2file(url); //下载视频信息文件；
-  if not dm.DownFileFromServer(url,localfilename)then exit;
-  if(localfilename='')then exit;
-  if not parseJsonFile(localfilename,videoInfo) then exit; //解析视频信息文件；
+  if(not uFuncs.searchFile(extractFileName(localFileName),extractFileDir(localFileName),localfilename))then
+  if(not uSocketDown.DownloadWithSocket(url,localFileName))then begin Log(Format('DownloadWithSocket:%s   fail.',[localFileName]));exit;end;
+  //if not dm.DownFileFromServer(url,localfilename)then exit;
+  if not parseJsonFile(localfilename,videoInfo) then begin Log(Format('parseJsonFile:%s   fail.',[localFileName]));exit;end; //解析视频信息文件；
   msg:='视频名称：'+videoInfo.videoName+#13#10;
   msg:=msg+'视频数量：'+inttostr(videoInfo.videoCount)+#13#10;
   for I := 0 to videoInfo.videoCount-1 do begin
