@@ -12,6 +12,7 @@ object fMain: TfMain
   Font.Style = []
   OldCreateOrder = False
   OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnShow = FormShow
   PixelsPerInch = 96
@@ -95,13 +96,22 @@ object fMain: TfMain
         'http://v.yinyuetai.com/video/3394527')
     end
     object btnTest: TButton
-      Left = 992
+      Left = 1000
       Top = 3
       Width = 75
       Height = 25
       Caption = #27979#35797
       TabOrder = 6
       OnClick = btnTestClick
+    end
+    object btnclose: TButton
+      Left = 925
+      Top = 3
+      Width = 75
+      Height = 25
+      Caption = #20851#38381
+      TabOrder = 7
+      OnClick = btncloseClick
     end
   end
   object Bar1: TStatusBar
@@ -225,7 +235,7 @@ object fMain: TfMain
       Top = 1
       Width = 786
       Height = 628
-      ActivePage = tsweb
+      ActivePage = tsChrome
       Align = alClient
       TabOrder = 1
       object tsweb: TTabSheet
@@ -244,8 +254,10 @@ object fMain: TfMain
           DisableCtrlShortcuts = 'N'
           UserInterfaceOptions = [EnablesFormsAutoComplete, EnableThemes]
           About = ' EmbeddedWB http://bsalsa.com/'
+          PrintOptions.Header = '&w&b'#39029#30721#65292'&p/&P'
           PrintOptions.HTMLHeader.Strings = (
             '<HTML></HTML>')
+          PrintOptions.Footer = '&u&b&d'
           PrintOptions.Orientation = poPortrait
           ExplicitWidth = 786
           ExplicitHeight = 625
@@ -326,6 +338,21 @@ object fMain: TfMain
           OnCellClick = DBGrid2CellClick
         end
       end
+      object tsChrome: TTabSheet
+        Caption = 'chrome'
+        ImageIndex = 3
+        object Chrome1: TChromiumWindow
+          Left = 0
+          Top = 0
+          Width = 778
+          Height = 600
+          Align = alClient
+          TabOrder = 0
+          OnClose = Chrome1Close
+          OnBeforeClose = Chrome1BeforeClose
+          OnAfterCreated = Chrome1AfterCreated
+        end
+      end
     end
   end
   object PopSelData: TPopupMenu
@@ -351,5 +378,16 @@ object fMain: TfMain
     OnTimer = Timer1Timer
     Left = 648
     Top = 432
+  end
+  object Chrm1: TChromium
+    Left = 344
+    Top = 328
+  end
+  object Timer2: TTimer
+    Enabled = False
+    Interval = 300
+    OnTimer = Timer2Timer
+    Left = 56
+    Top = 88
   end
 end

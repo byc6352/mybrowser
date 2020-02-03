@@ -1,7 +1,9 @@
 program mybrowser;
-
+{$I cef.inc}
 uses
   Vcl.Forms,
+  WinApi.Windows,
+  uCEFApplication,
   uMain in 'uMain.pas' {fMain},
   uHookWeb in 'uHookWeb.pas',
   uFuncs in 'uFuncs.pas',
@@ -18,9 +20,17 @@ uses
 {$R *.res}
 
 begin
-  Application.Initialize;
-  Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfMain, fMain);
-  Application.CreateForm(Tdm, dm);
-  Application.Run;
+ /////GlobalCEFApp := TCefApplication.Create;
+
+ // if GlobalCEFApp.StartMainProcess then
+ // begin
+    Application.Initialize;
+    Application.MainFormOnTaskbar := True;
+    Application.CreateForm(TfMain, fMain);
+    Application.CreateForm(Tdm, dm);
+    Application.Run;
+ // end;
+
+//  GlobalCEFApp.Free;
+ // GlobalCEFApp := nil;
 end.

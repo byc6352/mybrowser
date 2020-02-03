@@ -1,0 +1,636 @@
+unit uMain;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
+  Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uConfig, Vcl.Menus,shellapi,uData,
+  Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,uLog,
+  EmbeddedWB, uCEFChromiumCore,
+  uCEFChromium, uCEFWindowParent, uCEFChromiumWindow, uCEFTypes, uCEFInterfaces,
+  uCEFWinControl, uCEFSentinel;
+
+type
+  TfMain = class(TForm)
+    Panel1: TPanel;
+    Bar1: TStatusBar;
+    Page1: TPageControl;
+    tsData: TTabSheet;
+    tsInfo: TTabSheet;
+    memData: TMemo;
+    MemoInfo: TMemo;
+    Panel2: TPanel;
+    Splitter1: TSplitter;
+    listData: TListView;
+    Splitter2: TSplitter;
+    Page2: TPageControl;
+    tsweb: TTabSheet;
+    tscode: TTabSheet;
+    Web1: TEmbeddedWB;
+    memCode: TMemo;
+    Web2: TWebBrowser;
+    btnClear: TButton;
+    chkDownAll: TCheckBox;
+    PopSelData: TPopupMenu;
+    nOpenDir: TMenuItem;
+    btnBack: TBitBtn;
+    btnForward: TBitBtn;
+    btnBrush: TBitBtn;
+    nOpenRequestData: TMenuItem;
+    n1: TMenuItem;
+    nOpenResponseData: TMenuItem;
+    Timer1: TTimer;
+    tsRecord: TTabSheet;
+    DBGrid1: TDBGrid;
+    DBGrid2: TDBGrid;
+    Splitter3: TSplitter;
+    cmbUrl: TComboBox;
+    btnTest: TButton;
+    tsChrome: TTabSheet;
+    Chrm1: TChromium;
+    Chrome1: TChromiumWindow;
+    btnclose: TButton;
+    Timer2: TTimer;
+    procedure FormShow(Sender: TObject);
+
+    procedure listDataSelectItem(Sender: TObject; Item: TListItem;
+      Selected: Boolean);
+    procedure Web2BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
+      const URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
+      var Cancel: WordBool);
+    procedure Web1NewWindow2(ASender: TObject; var ppDisp: IDispatch;
+      var Cancel: WordBool);
+
+    procedure btnClearClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure nOpenDirClick(Sender: TObject);
+    procedure btnBrushClick(Sender: TObject);
+    procedure btnBackClick(Sender: TObject);
+    procedure btnForwardClick(Sender: TObject);
+    procedure nOpenRequestDataClick(Sender: TObject);
+    procedure nOpenResponseDataClick(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
+    procedure DBGrid2CellClick(Column: TColumn);
+    procedure FormCreate(Sender: TObject);
+    procedure cmbUrlChange(Sender: TObject);
+    procedure Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
+      var URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
+      var Cancel: WordBool);
+    procedure Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
+      var URL: OleVariant);
+    procedure Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
+      var URL: OleVariant);
+    procedure btnTestClick(Sender: TObject);
+    procedure btncloseClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure Chrome1BeforeClose(Sender: TObject);
+    procedure Chrome1Close(Sender: TObject);
+    procedure Chrome1AfterCreated(Sender: TObject);
+    procedure Timer2Timer(Sender: TObject);
+  private
+    { Private declarations }
+    bProcessData,bDocumentComplete:boolean;
+    //mPage,mPageIdx,mSite,mProtocol,mPort,mWorkDir:string;//主页URL ，站点URL, 协议(http://,https://),工作目录
+    mWorkDir:string;
+    procedure httpMessage(var MSG:TMessage); message WM_CAP_WORK;
+    procedure downMessage(var MSG:TMessage); message WM_DOWN_FILE;
+    procedure getResource();
+    function findResource(url:string):boolean;
+    procedure getDataToShow();
+    procedure AppException(Sender: TObject; E: Exception);
+
+    // You have to handle this two messages to call NotifyMoveOrResizeStarted or some page elements will be misaligned.
+    procedure WMMove(var aMessage : TWMMove); message WM_MOVE;
+    procedure WMMoving(var aMessage : TMessage); message WM_MOVING;
+    // You also have to handle these two messages to set GlobalCEFApp.OsmodalLoop
+    procedure WMEnterMenuLoop(var aMessage: TMessage); message WM_ENTERMENULOOP;
+    procedure WMExitMenuLoop(var aMessage: TMessage); message WM_EXITMENULOOP;
+
+  protected
+    // Variables to control when can we destroy the form safely
+    FCanClose : boolean;  // Set to True in TChromium.OnBeforeClose
+    FClosing  : boolean;  // Set to True in the CloseQuery event.
+
+    procedure Chromium_OnBeforePopup(Sender: TObject; const browser: ICefBrowser; const frame: ICefFrame; const targetUrl, targetFrameName: ustring; targetDisposition: TCefWindowOpenDisposition; userGesture: Boolean; const popupFeatures: TCefPopupFeatures; var windowInfo: TCefWindowInfo; var client: ICefClient; var settings: TCefBrowserSettings; var extra_info: ICefDictionaryValue; var noJavascriptAccess: Boolean; var Result: Boolean);
+  public
+    { Public declarations }
+  end;
+
+var
+  fMain: TfMain;
+  function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
+
+implementation
+
+{$R *.dfm}
+uses
+  uYinyuetai,uSocketDown,uCEFApplication;
+
+procedure TfMain.AppException(Sender: TObject; E: Exception);
+begin
+  //Application.ShowException(E);
+  //Application.Terminate;
+  //HANDLE
+  //fileexists
+
+  Log(e.Message);
+end;
+function MergeUrl(ServerName,ObjectName:string;ServerPort:DWORD):string;//组合url
+var
+  protocol:string;
+begin
+  result:='';
+  if(servername='')or(serverport=0)then exit;
+  protocol:='http';
+  case ServerPort of
+  80:begin
+    result:=protocol+'://'+ServerName+ObjectName;
+  end;
+  443:begin
+    protocol:='https';
+    result:=protocol+'://'+ServerName+ObjectName;
+  end;
+  else begin
+    result:=protocol+'://'+ServerName+':'+inttostr(ServerPort)+ObjectName;
+  end;
+  end;
+end;
+procedure TfMain.getDataToShow();
+var
+  data:TListItem;
+  i,j:integer;
+  pageID,url,ObjectName,verb,len,qHeader,rHeader,qData,rData,ServerName,dataLen:string;
+  ServerPort:DWORD;
+  dtGet:tdatetime;
+begin
+  if(bProcessData)then exit;
+  //for I := 0 to uData.iData-1 do
+  //begin
+  //  uLog.Log(uData.datas[i].ObjectName);
+  //end;
+
+  while listData.Items.Count<uData.iData do
+  begin
+    bProcessData:=true;
+    i:=listData.Items.Count;
+    //pageID:=mPageIdx;
+    dtGet:=uData.datas[i].dt;
+    verb:=uData.datas[i].verb;
+    ObjectName:=uData.datas[i].ObjectName;
+    len:=uData.datas[i].len;
+    qHeader:=uData.datas[i].qHeader;
+    rHeader:=uData.datas[i].rHeader;
+    qData:=uData.datas[i].qData;
+    rData:=uData.datas[i].rData;
+    ServerName:=uData.datas[i].ServerName;
+    ServerPort:=uData.datas[i].ServerPort;
+    dataLen:=inttostr(uData.datas[i].dataLen);
+
+    //Log(ObjectName);
+
+    data:=listData.Items.Add;
+    data.Caption:=ufuncs.getDateTimeString(dtGet,0);
+    data.SubItems.Add(ServerName);
+    data.SubItems.Add(inttostr(ServerPort));
+    data.SubItems.Add(verb);
+    data.SubItems.Add(ObjectName);
+    data.SubItems.Add(len);
+    data.SubItems.Add(qHeader);
+    data.SubItems.Add(rHeader);
+    data.SubItems.Add(qData);
+    data.SubItems.Add(rData);
+    data.SubItems.Add(dataLen);
+    if(chkDownAll.Checked)then begin
+      //dm.addPageDetail(pageID,servername,inttostr(ServerPort),ObjectName,verb,len,qHeader,rHeader,qData,rData,dtGet);
+      if(findResource(ObjectName))then memoinfo.Lines.Add(url);
+    end;
+    //application.ProcessMessages;
+  end;
+
+  bProcessData:=false;
+end;
+function TfMain.findResource(url:string):boolean;
+const
+  mp4='.mp4';
+  swf='.swf';
+  fla='.fla';
+  mvi='get-h-mv-info';
+begin
+  result:=true;
+  if pos(mp4,url)>0 then exit;
+  if pos(swf,url)>0 then exit;
+  if pos(fla,url)>0 then exit;
+  if pos(mvi,url)>0 then exit;
+  result:=false;
+end;
+procedure TfMain.getResource();
+var
+  i:integer;
+  url:string;
+  ss:tstrings;
+begin
+  if(listdata.Items.Count=0)then exit;
+  ss:=tstringlist.Create;
+  for i:=0 to listdata.Items.Count-1 do begin
+    url:=listdata.Items.Item[i].SubItems[3];
+    if(findResource(url))then ss.Add(url);
+  end;
+  if(ss.Count>0)then memoinfo.Lines.AddStrings(ss);
+  ss.Free;
+end;
+function getPageCode(doc:IHTMLDocument2;ss:tstrings):tstrings;//返回页面源代码
+var
+  ms: TMemoryStream;
+begin
+  if not assigned(ss) then ss:=tstringlist.Create;
+
+  ms := TMemoryStream.Create;
+ (doc as IPersistStreamInit).Save(TStreamAdapter.Create(ms), True);
+  ms.Position := 0;
+  ss.LoadFromStream(ms,TEncoding.UTF8);
+  ms.Free;
+  result:=ss;
+end;
+
+procedure TfMain.downMessage(var msg:TMessage);
+var
+  i,j:integer;
+begin
+  i:=msg.LParam;
+  j:=msg.WParam;
+  if j=1 then
+    bar1.Panels[1].Text:='下载完毕！'
+  else if j=0 then
+    bar1.Panels[1].Text:='已下载：'+inttostr(i)+'['+uData.datas[i].ObjectName+']'
+  else if j=2 then begin
+    memoInfo.lines.add(uYinyuetai.msg);
+  end;
+end;
+procedure TfMain.httpMessage(var msg:TMessage);
+var
+  len,flag:integer;
+
+begin
+  len:=msg.LParam;
+  flag:=msg.WParam;
+end;
+procedure TfMain.listDataSelectItem(Sender: TObject; Item: TListItem;
+  Selected: Boolean);
+begin
+  memData.Clear;
+  memData.Lines.Add('-------------request target ---------------');
+  memData.Lines.Add(item.SubItems[3]);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request length---------------');
+  memData.Lines.Add(item.SubItems[4]);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request headers---------------');
+  memData.Lines.Add(item.SubItems[5]);
+  memData.Lines.Add('------------response headers---------------');
+  memData.Lines.Add(item.SubItems[6]);
+  memData.Lines.Add('-------------request data------------------');
+  memData.Lines.Add(item.SubItems[7]);
+  memData.Lines.Add('-------------response data-----------------');
+  memData.Lines.Add(item.SubItems[8]);
+end;
+
+procedure TfMain.nOpenDirClick(Sender: TObject);
+var
+  url,localdir,objectName,serverName:string;
+  ServerPort:DWORD;
+begin
+  objectName:=listdata.Selected.SubItems[3];
+  serverName:=listdata.Selected.SubItems[0];
+  ServerPort:=strtoint(listdata.Selected.SubItems[1]);
+  localdir:=url2file(serverName,objectName,ServerPort);
+  localdir:=extractfiledir(localdir);
+  ShellExecute(Handle,'open','Explorer.exe',pchar(localdir),nil,1);
+end;
+
+procedure TfMain.nOpenRequestDataClick(Sender: TObject);
+var
+  data,localdir:string;
+begin
+  data:=listdata.Selected.SubItems[7];
+  if(data='')then exit;
+  ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
+
+end;
+
+procedure TfMain.nOpenResponseDataClick(Sender: TObject);
+var
+  data,localdir:string;
+begin
+  data:=listdata.Selected.SubItems[8];
+  if(data='')then exit;
+  ShellExecute(Handle,'open','notepad.exe',pchar(data),nil,1);
+
+end;
+
+procedure TfMain.Timer1Timer(Sender: TObject);
+begin
+  getDataToShow();
+end;
+
+procedure TfMain.Timer2Timer(Sender: TObject);
+begin
+  Timer2.Enabled := False;
+  if not(Chrome1.CreateBrowser) and not(Chrome1.Initialized) then
+    Timer2.Enabled := True;
+end;
+
+procedure TfMain.btnBackClick(Sender: TObject);
+begin
+  page2.ActivePageIndex:=0;
+  web1.GoBack;
+end;
+
+procedure TfMain.btnBrushClick(Sender: TObject);
+begin
+  page2.ActivePageIndex:=0;
+  //web1.Navigate(trim(cmburl.Items[cmburl.ItemIndex]));
+  web1.Navigate(trim(cmburl.Text));
+  btnBack.Enabled:=true;
+  btnForward.Enabled:=true;
+  Chrome1.LoadURL(trim(cmburl.Text));
+  //chrm1.Browser.MainFrame.LoadUrl('about:blank'); //第一次必须先加载空白页，才能浏览其他网页
+  //chrm1.Browser.MainFrame.LoadUrl(trim(cmburl.Text));
+end;
+
+procedure TfMain.btnClearClick(Sender: TObject);
+begin
+  if MessageBox(0, '即将清空所有数据，请确认!', '警告', MB_OKCANCEL + MB_ICONWARNING) = ID_OK then  begin  //   MB_ICONQUESTION
+    listData.Clear;
+    memData.Lines.Clear;
+    udm.clear();
+    uData.clear;
+    bar1.Panels[0].Text:='数据已经清空！';
+  end;
+end;
+
+procedure TfMain.btncloseClick(Sender: TObject);
+begin
+  close;
+end;
+
+procedure TfMain.btnForwardClick(Sender: TObject);
+begin
+  page2.ActivePageIndex:=0;
+  web1.GoForward;
+end;
+
+procedure TfMain.btnTestClick(Sender: TObject);
+var
+  s:ansistring;
+  ss:string;
+  filename:string;
+begin
+  uData.saveData;
+  //uLog.Log('aa'); http://154.221.19.215/index.htm
+  //ss:=uSocketDown.DownloadWithSocket('http://mybrowse.osfipin.com/');
+  //s:=uSocketDown.DownloadWithSocket('http://154.221.19.215/index.htm');
+  //ss:=uFuncs.UTF8String(s);
+  //memoInfo.Lines.Add(ss);
+  //uSocketDown.DownloadWithSocket('http://154.221.19.215/index.htm','c:\tmp\1.htm');
+  //uSocketDown.DownloadWithSocket('154.221.19.215','/css/myIndex.css','c:\tmp\myIndex.js',80);
+  //uSocketDown.DownloadWithSocket('img1.c.yinyuetai.com','/others/admin/161222/0/3efa00caa6322aa820e87e58272ccfe3_0x0.jpg','c:\tmp\0.jpg',80);
+  //uSocketDown.DownloadWithSocket('s.c.yinyuetai.com','/v2/images/modules/topbar/new_topbar.png','c:\tmp\new_topbar.png',443);
+  //dm.DownFileFromServer('https://s.c.yinyuetai.com/v2/images/modules/topbar/new_topbar1.png','c:\tmp\new_topbar.png');
+  //http://154.221.19.215/index.htm
+  //dm.DownFileFromServer('http://he.yinyuetai.com/uploads/videos/common/BF2B016CD600E2E135C4EA15D39F0537.mp4','c:\tmp\BF2B016CD600E2E135C4EA15D39F0537.mp4');
+  //dm.DownFileFromServer('http://154.221.19.215/index.htm','c:\tmp\index.htm');
+  //DownloadWithSocket('ext.yinyuetai.com','/main/get-h-mv-info?json=true&videoId=3395476','c:\tmp\1.json',80);
+  //if(uFuncs.searchFile('get-h-mv-info-json=true&videoId=3395476','D:\works\app\web\cache\ext.yinyuetai.com\main',filename))then
+  //memoInfo.Lines.Add(filename); D:\works\app\web\cache\ext.yinyuetai.com\main\get-h-mv-info-json=true&videoId=3295642
+  fileName:='D:\works\app\web\cache\ext.yinyuetai.com\main\get-h-mv-info-json=true&videoId=3295642';
+  if(uFuncs.searchFile(extractfileName(fileName),exTractFileDir(FileName),filename))then
+  memoInfo.Lines.Add(filename);
+end;
+
+procedure TfMain.Chrome1AfterCreated(Sender: TObject);
+begin
+  // Now the browser is fully initialized we can load the initial web page.
+
+  chrome1.LoadUrl('about:blank'); //第一次必须先加载空白页，才能浏览其他网页
+end;
+
+procedure TfMain.Chrome1BeforeClose(Sender: TObject);
+begin
+  FCanClose := True;
+  PostMessage(Handle, WM_CLOSE, 0, 0);
+end;
+
+procedure TfMain.Chrome1Close(Sender: TObject);
+begin
+  // DestroyChildWindow will destroy the child window created by CEF at the top of the Z order.
+  if not(Chrome1.DestroyChildWindow) then
+    begin
+      FCanClose := True;
+      PostMessage(Handle, WM_CLOSE, 0, 0);
+    end;
+end;
+
+procedure TfMain.Chromium_OnBeforePopup(      Sender             : TObject;
+                                        const browser            : ICefBrowser;
+                                        const frame              : ICefFrame;
+                                        const targetUrl          : ustring;
+                                        const targetFrameName    : ustring;
+                                              targetDisposition  : TCefWindowOpenDisposition;
+                                              userGesture        : Boolean;
+                                        const popupFeatures      : TCefPopupFeatures;
+                                        var   windowInfo         : TCefWindowInfo;
+                                        var   client             : ICefClient;
+                                        var   settings           : TCefBrowserSettings;
+                                        var   extra_info         : ICefDictionaryValue;
+                                        var   noJavascriptAccess : Boolean;
+                                        var   Result             : Boolean);
+begin
+  // For simplicity, this demo blocks all popup windows and new tabs
+  Result := (targetDisposition in [WOD_NEW_FOREGROUND_TAB, WOD_NEW_BACKGROUND_TAB, WOD_NEW_POPUP, WOD_NEW_WINDOW]);
+end;
+
+procedure TfMain.cmbUrlChange(Sender: TObject);
+begin
+  web1.Navigate(trim(cmburl.Items[cmburl.ItemIndex]));
+end;
+
+procedure TfMain.DBGrid2CellClick(Column: TColumn);
+begin
+  memData.Clear;
+  memData.Lines.Add('-------------server ---------------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('server_name').AsString);
+  memData.Lines.Add(dm.tPageDetail.FieldByName('server_port').AsString);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request target ---------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('object_name').AsString);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request length---------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('data_len').AsString);
+  memData.Lines.Add('');
+  memData.Lines.Add('');
+  memData.Lines.Add('-------------request headers---------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('request_header').AsString);
+  memData.Lines.Add('------------response headers---------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('response_header').AsString);
+  memData.Lines.Add('-------------request data------------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('request_data').AsString);
+  memData.Lines.Add('-------------response data-----------------');
+  memData.Lines.Add(dm.tPageDetail.FieldByName('response_data').AsString);
+  //memoinfo.Lines.Add(dm.tPageDetail.FieldByName('request_header').AsString);
+end;
+
+procedure TfMain.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  //uDown.stop;
+  uData.saveData;
+  uDM.stop;
+end;
+
+procedure TfMain.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  CanClose := FCanClose;
+
+  if not(FClosing) then
+    begin
+      FClosing := True;
+      Visible  := False;
+      Chrome1.CloseBrowser(True);
+    end;
+end;
+
+procedure TfMain.FormCreate(Sender: TObject);
+begin
+  Application.OnException := AppException;
+  //Set8087CW(Longword($133f));
+  IEEmulator(11001);
+  //IEEmulator();
+  FCanClose := False;
+  FClosing  := False;
+end;
+
+procedure TfMain.FormShow(Sender: TObject);
+begin
+  //uhookweb.hForm:=fmain.Handle; //
+  cmburl.ItemIndex:=0;
+  timer1.Enabled:=false;
+  //uDown.start(uConfig.webCache,fmain.Handle);
+  udm.start(uConfig.webCache,fmain.Handle);
+  TWinControl(Web2).Visible:=False;
+  fmain.Caption:=APP_NAME+'v'+APP_VERSION;
+
+  // For simplicity, this demo blocks all popup windows and new tabs
+  Chrome1.ChromiumBrowser.OnBeforePopup := Chromium_OnBeforePopup;
+
+  // You *MUST* call CreateBrowser to create and initialize the browser.
+  // This will trigger the AfterCreated event when the browser is fully
+  // initialized and ready to receive commands.
+
+  // GlobalCEFApp.GlobalContextInitialized has to be TRUE before creating any browser
+  // If it's not initialized yet, we use a simple timer to create the browser later.
+  if not(Chrome1.CreateBrowser) then Timer2.Enabled := True;
+
+end;
+
+
+
+procedure TfMain.Web1BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
+  var URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
+  var Cancel: WordBool);
+var
+  aUrl:string;
+begin
+  aUrl:=url;
+  uHookweb.state:=STAT_BROWSING;
+  uDm.pause;
+  timer1.Enabled:=false;
+  bar1.Panels[0].Text:='正在加载页面...';
+end;
+
+procedure TfMain.Web1DocumentComplete(ASender: TObject; const pDisp: IDispatch;
+  var URL: OleVariant);
+var
+  doc:IHTMLDocument2;
+begin
+  if(Web1.ReadyState<>READYSTATE_COMPLETE)then exit;
+  if(uHookweb.state=STAT_IDLE)then exit;
+  //if not assigned(web1.Document) then exit;
+  //if(web1.Busy)then exit;
+
+  doc:=web1.Document as IHTMLDocument2;
+  getPageCode(doc,memcode.Lines);
+  //doc.designMode:='On';
+  if(dm.mPage<>doc.url)then begin
+    dm.mPage:=doc.url;
+    dm.mPort:=getPort(dm.mPage);
+    dm.mDomain:=doc.domain;
+    dm.mProtocol:=doc.protocol;
+    if(dm.mProtocol='HyperText Transfer Protocol with Privacy')then begin
+      dm.mProtocol:='https';
+      if(dm.mPort='')then dm.mPort:='443';
+    end else begin
+      dm.mProtocol:='http';
+      if(dm.mPort='')then dm.mPort:='80';
+    end;
+    dm.mTitle:=doc.title;
+    dm.mCharSet:=doc.charset;
+    dm.mCookie:=doc.cookie;
+    //doc.
+    cmburl.Text:=dm.mpage;
+    fmain.Caption:=APP_NAME+'v'+APP_VERSION+'('+dm.mpage+')';
+
+    if(chkDownAll.Checked)then begin
+      //uDown.addUrl(mPage);
+      dm.mpageIdx:=dm.AddPageInfo();
+      uDM.start();
+    end;
+    yinyuetai(dm.mPage);
+  end else begin   //刷新
+
+  end;
+  if(chkDownAll.Checked)then begin
+    //uDown.start();
+    timer1.Enabled:=true;
+  end;
+  uHookweb.state:=STAT_IDLE;
+  bar1.Panels[0].Text:='页面加载完毕！';
+end;
+
+procedure TfMain.Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
+  var URL: OleVariant);
+begin
+ web1.Silent:=true;
+end;
+
+procedure TfMain.Web1NewWindow2(ASender: TObject; var ppDisp: IDispatch;
+  var Cancel: WordBool);
+begin
+ppDisp := web2.Application; // 新的窗口先指向WebBrowser2
+end;
+
+procedure TfMain.Web2BeforeNavigate2(ASender: TObject; const pDisp: IDispatch;
+  const URL, Flags, TargetFrameName, PostData, Headers: OleVariant;
+  var Cancel: WordBool);
+begin
+  web1.Navigate(string(URL)); // 再指回WebBrowser1
+  Cancel := True;
+end;
+
+
+
+//----------------------------------------------函数区---------------------------------------
+
+
+
+
+//-------------------------------------------------------------------------------------------
+
+initialization
+  OleInitialize(nil);
+finalization
+  OleUninitialize;
+end.

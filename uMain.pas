@@ -7,7 +7,9 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.OleCtrls, SHDocVw,urlmon,strutils,
   Vcl.ExtCtrls, Vcl.StdCtrls,uhookweb,activex,mshtml,uConfig, Vcl.Menus,shellapi,uData,
   Vcl.Buttons,uFuncs,uDM, Data.DB, Vcl.Grids, Vcl.DBGrids, SHDocVw_EWB, EwbCore,uLog,
-  EmbeddedWB;
+  EmbeddedWB, uCEFChromiumCore,
+  uCEFChromium, uCEFWindowParent, uCEFChromiumWindow, uCEFTypes, uCEFInterfaces,
+  uCEFWinControl, uCEFSentinel;
 
 type
   TfMain = class(TForm)
@@ -45,6 +47,11 @@ type
     Splitter3: TSplitter;
     cmbUrl: TComboBox;
     btnTest: TButton;
+    tsChrome: TTabSheet;
+    Chrm1: TChromium;
+    Chrome1: TChromiumWindow;
+    btnclose: TButton;
+    Timer2: TTimer;
     procedure FormShow(Sender: TObject);
 
     procedure listDataSelectItem(Sender: TObject; Item: TListItem;
@@ -75,6 +82,12 @@ type
     procedure Web1NavigateComplete2(ASender: TObject; const pDisp: IDispatch;
       var URL: OleVariant);
     procedure btnTestClick(Sender: TObject);
+    procedure btncloseClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure Chrome1BeforeClose(Sender: TObject);
+    procedure Chrome1Close(Sender: TObject);
+    procedure Chrome1AfterCreated(Sender: TObject);
+    procedure Timer2Timer(Sender: TObject);
   private
     { Private declarations }
     bProcessData,bDocumentComplete:boolean;
@@ -86,6 +99,20 @@ type
     function findResource(url:string):boolean;
     procedure getDataToShow();
     procedure AppException(Sender: TObject; E: Exception);
+
+    // You have to handle this two messages to call NotifyMoveOrResizeStarted or some page elements will be misaligned.
+    procedure WMMove(var aMessage : TWMMove); message WM_MOVE;
+    procedure WMMoving(var aMessage : TMessage); message WM_MOVING;
+    // You also have to handle these two messages to set GlobalCEFApp.OsmodalLoop
+    procedure WMEnterMenuLoop(var aMessage: TMessage); message WM_ENTERMENULOOP;
+    procedure WMExitMenuLoop(var aMessage: TMessage); message WM_EXITMENULOOP;
+
+  protected
+    // Variables to control when can we destroy the form safely
+    FCanClose : boolean;  // Set to True in TChromium.OnBeforeClose
+    FClosing  : boolean;  // Set to True in the CloseQuery event.
+
+    procedure Chromium_OnBeforePopup(Sender: TObject; const browser: ICefBrowser; const frame: ICefFrame; const targetUrl, targetFrameName: ustring; targetDisposition: TCefWindowOpenDisposition; userGesture: Boolean; const popupFeatures: TCefPopupFeatures; var windowInfo: TCefWindowInfo; var client: ICefClient; var settings: TCefBrowserSettings; var extra_info: ICefDictionaryValue; var noJavascriptAccess: Boolean; var Result: Boolean);
   public
     { Public declarations }
   end;
@@ -98,7 +125,8 @@ implementation
 
 {$R *.dfm}
 uses
-  uYinyuetai,uSocketDown;
+  uYinyuetai,uSocketDown,uCEFApplication;
+
 procedure TfMain.AppException(Sender: TObject; E: Exception);
 begin
   //Application.ShowException(E);
@@ -307,6 +335,13 @@ begin
   getDataToShow();
 end;
 
+procedure TfMain.Timer2Timer(Sender: TObject);
+begin
+  Timer2.Enabled := False;
+  if not(Chrome1.CreateBrowser) and not(Chrome1.Initialized) then
+    Timer2.Enabled := True;
+end;
+
 procedure TfMain.btnBackClick(Sender: TObject);
 begin
   page2.ActivePageIndex:=0;
@@ -320,6 +355,9 @@ begin
   web1.Navigate(trim(cmburl.Text));
   btnBack.Enabled:=true;
   btnForward.Enabled:=true;
+  Chrome1.LoadURL(trim(cmburl.Text));
+  //chrm1.Browser.MainFrame.LoadUrl('about:blank'); //第一次必须先加载空白页，才能浏览其他网页
+  //chrm1.Browser.MainFrame.LoadUrl(trim(cmburl.Text));
 end;
 
 procedure TfMain.btnClearClick(Sender: TObject);
@@ -331,6 +369,11 @@ begin
     uData.clear;
     bar1.Panels[0].Text:='数据已经清空！';
   end;
+end;
+
+procedure TfMain.btncloseClick(Sender: TObject);
+begin
+  close;
 end;
 
 procedure TfMain.btnForwardClick(Sender: TObject);
@@ -365,6 +408,48 @@ begin
   fileName:='D:\works\app\web\cache\ext.yinyuetai.com\main\get-h-mv-info-json=true&videoId=3295642';
   if(uFuncs.searchFile(extractfileName(fileName),exTractFileDir(FileName),filename))then
   memoInfo.Lines.Add(filename);
+end;
+
+procedure TfMain.Chrome1AfterCreated(Sender: TObject);
+begin
+  // Now the browser is fully initialized we can load the initial web page.
+
+  chrome1.LoadUrl('about:blank'); //第一次必须先加载空白页，才能浏览其他网页
+end;
+
+procedure TfMain.Chrome1BeforeClose(Sender: TObject);
+begin
+  FCanClose := True;
+  PostMessage(Handle, WM_CLOSE, 0, 0);
+end;
+
+procedure TfMain.Chrome1Close(Sender: TObject);
+begin
+  // DestroyChildWindow will destroy the child window created by CEF at the top of the Z order.
+  if not(Chrome1.DestroyChildWindow) then
+    begin
+      FCanClose := True;
+      PostMessage(Handle, WM_CLOSE, 0, 0);
+    end;
+end;
+
+procedure TfMain.Chromium_OnBeforePopup(      Sender             : TObject;
+                                        const browser            : ICefBrowser;
+                                        const frame              : ICefFrame;
+                                        const targetUrl          : ustring;
+                                        const targetFrameName    : ustring;
+                                              targetDisposition  : TCefWindowOpenDisposition;
+                                              userGesture        : Boolean;
+                                        const popupFeatures      : TCefPopupFeatures;
+                                        var   windowInfo         : TCefWindowInfo;
+                                        var   client             : ICefClient;
+                                        var   settings           : TCefBrowserSettings;
+                                        var   extra_info         : ICefDictionaryValue;
+                                        var   noJavascriptAccess : Boolean;
+                                        var   Result             : Boolean);
+begin
+  // For simplicity, this demo blocks all popup windows and new tabs
+  Result := (targetDisposition in [WOD_NEW_FOREGROUND_TAB, WOD_NEW_BACKGROUND_TAB, WOD_NEW_POPUP, WOD_NEW_WINDOW]);
 end;
 
 procedure TfMain.cmbUrlChange(Sender: TObject);
@@ -406,12 +491,26 @@ begin
   uDM.stop;
 end;
 
+procedure TfMain.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  CanClose := FCanClose;
+
+  if not(FClosing) then
+    begin
+      FClosing := True;
+      Visible  := False;
+      Chrome1.CloseBrowser(True);
+    end;
+end;
+
 procedure TfMain.FormCreate(Sender: TObject);
 begin
   Application.OnException := AppException;
   //Set8087CW(Longword($133f));
   IEEmulator(11001);
   //IEEmulator();
+  FCanClose := False;
+  FClosing  := False;
 end;
 
 procedure TfMain.FormShow(Sender: TObject);
@@ -423,6 +522,17 @@ begin
   udm.start(uConfig.webCache,fmain.Handle);
   TWinControl(Web2).Visible:=False;
   fmain.Caption:=APP_NAME+'v'+APP_VERSION;
+
+  // For simplicity, this demo blocks all popup windows and new tabs
+  Chrome1.ChromiumBrowser.OnBeforePopup := Chromium_OnBeforePopup;
+
+  // You *MUST* call CreateBrowser to create and initialize the browser.
+  // This will trigger the AfterCreated event when the browser is fully
+  // initialized and ready to receive commands.
+
+  // GlobalCEFApp.GlobalContextInitialized has to be TRUE before creating any browser
+  // If it's not initialized yet, we use a simple timer to create the browser later.
+  if not(Chrome1.CreateBrowser) then Timer2.Enabled := True;
 
 end;
 
@@ -511,6 +621,36 @@ begin
 end;
 
 
+
+
+
+procedure TfMain.WMMove(var aMessage : TWMMove);
+begin
+  inherited;
+
+  if (Chrome1 <> nil) then Chrome1.NotifyMoveOrResizeStarted;
+end;
+
+procedure TfMain.WMMoving(var aMessage : TMessage);
+begin
+  inherited;
+
+  if (Chrome1 <> nil) then Chrome1.NotifyMoveOrResizeStarted;
+end;
+
+procedure TfMain.WMEnterMenuLoop(var aMessage: TMessage);
+begin
+  inherited;
+
+  if (aMessage.wParam = 0) and (GlobalCEFApp <> nil) then GlobalCEFApp.OsmodalLoop := True;
+end;
+
+procedure TfMain.WMExitMenuLoop(var aMessage: TMessage);
+begin
+  inherited;
+
+  if (aMessage.wParam = 0) and (GlobalCEFApp <> nil) then GlobalCEFApp.OsmodalLoop := False;
+end;
 
 //----------------------------------------------函数区---------------------------------------
 
